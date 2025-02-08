@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparison of Net-Code Solutions to Lag</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+            padding: 20px;
+            background: #fff;
+            margin-top: 30px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        ul {
+            margin-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Comparison of Net-Code Based Solutions to Lag in Peer-to-Peer Online Games</h1>
+        <p><strong>Seth Messier (V00975362) & Dario Monette (V00983158)</strong></p>
+
+        <h2>Introduction</h2>
+        <p>Being able to provide players in online games with synchronized game states is an ongoing problem. As games get more complex and the demand for accurate representation of opponents becomes more important, solutions for reducing visual lag on an application level have evolved to improve gameplay quality. Online gaming is a massive market, not only for casual players but also competitive ones, where issues with server quality and delay can cause players to avoid a game entirely. By evaluating and comparing solutions commonly used to diminish the effects of connection delays, we hope to provide strategies developers can choose from based on their project's needs.</p>
+
+        <h2>Net-Code Methods</h2>
+        <p>Many methods, such as rollback and delay-based net-code, already exist to address the problems described above. Each has its own advantages and disadvantages. Some may perform better in certain environments due to side effects on gameplay or specific multiplayer scenarios. Although individual analyses of these net-code types have been performed, there is limited information comparing them under identical conditions. Providing data on their differences in the same setting offers deeper insights into their strengths and weaknesses.</p>
+
+        <h2>Project Plan</h2>
+        <p>We will develop a simple online game using JavaScript, complex enough to have network quality affect its performance. The project will follow these steps:</p>
+        <ul>
+            <li>Implement a baseline net-code system (basic packet sending and receiving).</li>
+            <li>Develop two different net-code models: delay-based and rollback.</li>
+            <li>Compare their performance under various real or simulated network conditions.</li>
+        </ul>
+        <p>While using one of these methods is common, our approach is unique in directly comparing the two side by side.</p>
+
+        <h2>Expected Outcomes</h2>
+        <p>By the end of the project, we will have:</p>
+        <ul>
+            <li>A playable game.</li>
+            <li>Data on how the game performs with different net-code types.</li>
+            <li>A report showcasing our findings and implications for net-code performance.</li>
+        </ul>
+
+        <h2>Timeline</h2>
+        <ul>
+            <li><strong>Weeks 1-4:</strong> Implement basic game and peer-to-peer networking.</li>
+            <li><strong>Weeks 4-6:</strong> Implement delay-based and rollback strategies.</li>
+            <li><strong>Weeks 6-8:</strong> Develop and collect performance data, possibly conduct user tests.</li>
+            <li><strong>Weeks 8-10:</strong> Create a video, finalize the report, and apply final touches.</li>
+        </ul>
+
+        <h2>Important Dates</h2>
+        <ul>
+            <li><strong>Midterm Presentation:</strong> Mid-March</li>
+            <li><strong>Final Presentation:</strong> Early April</li>
+            <li><strong>Deliverable and Report:</strong> Mid-April</li>
+        </ul>
+
+        <h2>Hosting and Infrastructure</h2>
+        <p>We are currently deciding who will host the project website and client side on GitHub Pages. An update will be posted on Teams once finalized.</p>
+        <p>The server facilitating P2P will be hosted on <a href="https://render.com/" target="_blank">Render</a>. For NAT traversal, we will use Google’s public STUN servers.</p>
+    </div>
+</body>
+</html>
