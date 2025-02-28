@@ -83,7 +83,7 @@ Deno.serve({ port: PORT, hostname: "127.0.0.1" }, async (req : Request) => {
 
     new_lobby.id = generateUniqueLobbyID(6); // Generate and log lobby id, create channel of that name
     id_list.push(new_lobby.id);
-    sono.channel('new_lobby.id', () => {
+    sono.channel(new_lobby.id, () => {
       console.log('new lobby channel created: ' + new_lobby.id);
     })
 

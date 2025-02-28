@@ -1,0 +1,16 @@
+{
+  "version": "4",
+  "remote": {
+    "https://deno.land/x/sono@v1.2/mod.ts": "1551b548c49a4b651abae0b61e05f017009ebd495c140c1cd913a748b002194f",
+    "https://deno.land/x/sono@v1.2/src/client.ts": "117b93a005d93f63e4e76a55e04cd8edc0d697290443147297fc0912644dba86",
+    "https://deno.land/x/sono@v1.2/src/eventhandler.ts": "cf838187f4d7ff01ebe5c0730835829bb9b0b81bab14a0e21f7850ff68e3d278",
+    "https://deno.land/x/sono@v1.2/src/packet.ts": "c49a2724251414781c782a3c0ed6d259d6dac0e60313be4f5e5f97ad998ce5d0",
+    "https://deno.land/x/sono@v1.2/src/server.ts": "144a1ccd332a6c8b13b3c8dd5649fc6c989d75e83d131fe74ef2568c2d27a32f",
+    "https://deno.land/x/sono@v1.2/src/sonoClient.js": "ff970b35cda6c59e87d6ef03893df379b3eb1c8d42accbd3d85c457cb78e2e7e"
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@std/assert@1"
+    ]
+  }
+}
