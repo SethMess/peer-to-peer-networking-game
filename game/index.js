@@ -26,7 +26,7 @@ class Player {
 }
 
 class Projectile {
-    constructor(x, y, radius, color, velocity){
+    constructor(x, y, radius, color, velocity) {
         this.x = x;
         this.y = y;
         this.radius = radius;
@@ -53,7 +53,7 @@ class Projectile {
 
 
 class Enemy {
-    constructor(x, y, radius, color, velocity){
+    constructor(x, y, radius, color, velocity) {
         this.x = x;
         this.y = y;
         this.radius = radius;
@@ -80,14 +80,14 @@ class Enemy {
 
 
 
-function animate(){
+function animate() {
     requestAnimationFrame(animate);
 
     c.clearRect(0, 0, canvas.width, canvas.height);
 
 
     player.draw();// console.log(projectiles);
-    
+
 
     projectiles.forEach((proj) => {
         proj.update();
@@ -97,8 +97,8 @@ function animate(){
         enemy.update();
     })
 
-    
-    
+
+
 }
 
 
@@ -108,7 +108,7 @@ function animate(){
 addEventListener('click', (event) => {
     console.log("spawn");
     let angle = Math.atan2(event.clientY - player.y, event.clientX - player.x);
-    let velocity = {x: Math.cos(angle) * 2, y: Math.sin(angle) * 2};
+    let velocity = { x: Math.cos(angle) * 2, y: Math.sin(angle) * 2 };
     // velocity = velocity * 2;
     const projectile = new Projectile(player.x, player.y, 5, 'green', velocity);
     projectiles.push(projectile);
@@ -116,21 +116,21 @@ addEventListener('click', (event) => {
 });
 
 
-function spawnEnemies(){
+function spawnEnemies() {
     setInterval(() => {
         const radius = Math.random() * (30 - 10) + 10;
         let x;
         let y;
-        if(Math.random() < 0.5){
-            x = Math.random() < 0.5 ? 0 - radius: canvas.width + radius;
+        if (Math.random() < 0.5) {
+            x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius;
             y = Math.random() * canvas.height;
-        }else{
-            x = Math.random() * canvas.width;            
-            y = Math.random() < 0.5 ? 0 - radius: canvas.height + radius;
+        } else {
+            x = Math.random() * canvas.width;
+            y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius;
         }
-        
+
         let angle = Math.atan2(player.y - y, player.x - x);
-        let velocity = {x: Math.cos(angle) * 2, y: Math.sin(angle) * 2};
+        let velocity = { x: Math.cos(angle), y: Math.sin(angle) };
         enemies.push(new Enemy(x, y, radius, "purple", velocity));
     }, 1000)
 }
