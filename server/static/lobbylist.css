@@ -1,0 +1,100 @@
+.bebas-neue-regular {
+    font-family: "Bebas Neue", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
+html {
+    font-family: "Bebas Neue", sans-serif;
+    font-weight: 400;
+}
+
+h1 {
+    font-family: sans-serif;
+    text-align: center;
+
+    font-family: "Bebas Neue", sans-serif;
+    font-weight: 800;
+    font-size: 70;
+
+    margin: 0.5em;
+}
+
+.flex-container-h {
+    display: flex;
+    flex-direction: row;
+}
+
+.flex-container-v {
+    display: flex;
+    flex-direction: column;
+}
+
+.joinbutton {
+    border: none;
+    color: white;
+    padding: 0px 2.0em;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0px;
+    cursor: pointer;
+    background-color: green;
+    font-family: "Bebas Neue", sans-serif;
+    font-weight: 800;
+    font-size: 1.0em;
+    border-left: 2px solid darkolivegreen;
+}
+
+.createbutton {
+    border: none;
+    color: white;
+    padding: 0px 2.0em;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0px;
+    cursor: pointer;
+    background-color: rgb(106, 170, 11);
+    font-family: "Bebas Neue", sans-serif;
+    font-weight: 800;
+    font-size: 1.0em;
+    width: 100%;
+}
+
+.lobbylist {
+    margin: auto;
+    border: 2px solid grey;
+    border-radius: 5px;
+    background-color: lightgray;
+    width: 70%;
+}
+
+.lobbyinfo {
+    margin: 0px 0em 0px 1em;
+}
+
+.lobbylistheader {
+    margin: 0px;
+    text-align: center;
+    background-color: whitesmoke;
+    border-radius: 5px 5px 0px 0px;
+}
+
+.lobbyitem {
+    align-items: center;
+    margin: 5px;
+    padding: 0px 0px 0px 0em;
+    border: 2px solid grey;
+    background-color: white;
+    justify-content: space-between;
+    font-size: 2.0em;
+}
+
+.lobbylistfooter {
+    margin: 0px;
+    text-align: center;
+    background-color: whitesmoke;
+    border-radius: 0px 0px 5px 5px;
+    margin: 5px;
+}

@@ -14,7 +14,7 @@
 <p>Returns a list of all currently existing lobbies in the form of an array of JSON objects.<br>
 Structure of Lobby object:<br>
 <ul>
-    <li>name (string): The name of the server, defaults to "Unamed Lobby"</li>
+    <li>name (string): The name of the server, defaults to "Lobby"</li>
     <li>id (string): The unqiue ID of a server, used when joining it</li>
     <li>max_players (int): the number of players a lobby can hold (currently always = 4)</li>
     <li>players (int): the number of players currently in a lobby (currently always = 0)</li>
@@ -25,14 +25,14 @@ Structure of Lobby object:<br>
 <p>Creates a new lobby instance and returns information about the newly created lobby. The body of the request if the name of the lobby.<br>
 Structure of Lobby object:<br>
 <ul>
-    <li>name (string): The name of the server, defaults to "Unamed Lobby"</li>
+    <li>name (string): The name of the server, defaults to "Lobby"</li>
     <li>id (string): The unqiue ID of a server, used when joining it</li>
     <li>max_players (int): the number of players a lobby can hold (currently always = 4)</li>
     <li>players (int): the number of players currently in a lobby (currently always = 0)</li>
   </ul> 
 </p>
 
-<h2>GET ./lobbies/:lobby_id</h2>
+<h1>GET ./lobbies/:lobby_id</h1>
 <p>Establishes a WebRTC connection if the given lobby exists and is not full.<br> 
 If established successfully, switch to the Sono channel ":lobby_id" and send out initalization event message.
 </p>
