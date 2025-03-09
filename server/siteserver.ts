@@ -1,8 +1,10 @@
 
 import { Sono } from 'https://deno.land/x/sono@v1.2/mod.ts';
+import { serveDir, serveFile } from "jsr:@std/http/file-server";
 
 const sono = new Sono();
-const PORT = 3000;
+const PORT = 80; // Default HTTP port
+const WEBSOCKETPORT = 3001 // Chose it cause it is cool B)
 const HOSTNAME = "localhost"; // <-- CHANGE HERE AND IN lobbylist.js TO YOUR LOCAL IP TO AVOID SOP!
 
 class Lobby {
@@ -53,27 +55,12 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
   // Index Page
   if (req.method === "GET" && url.pathname === "/") {
     console.log("FETCH INDEX")
-    const file = await Deno.open("./static/lobbylist.html", { read: true, write: false });
-    return new Response(file.readable);
+    return serveFile(req, "./static/lobbylist.html");
   }
 
   // Get server list
   else if (req.method === "GET" && url.pathname === "/lobbies") {
     return new Response(JSON.stringify(lobby_list), { status: 200 });
-  }
-
-  // Connect to server (WebSocket/RTC)
-  else if (req.method === "GET" && split_path.length == 3 && split_path[1] === "lobbies") {
-    if (id_list.includes(split_path[2])) {
-      // Lobby exists, connect user
-      return sono.connect(req, () => {
-        console.log("New client connected to lobby " + split_path[2]);
-      });
-    }
-    else {
-      // Lobby does not exist, do nothing
-      return new Response("Lobby not found!", { status: 404 });
-    }
   }
 
   // Add a new server to the server list with the desired name, respond with the lobby object created
@@ -93,13 +80,50 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
     return new Response(JSON.stringify(new_lobby), { status: 200 });
   }
 
+  // Send them to the game!
+  else if (req.method === "GET" && split_path[1] === "play") {
+    console.log("SERVING GAMER")
+    const file = await Deno.open("./game/game.html", { read: true, write: false });
+    return new Response(file.readable);
+  }
+
   else { // If all else fails, serve a regular file
     let filepath = url.pathname;
+    console.log(filepath);
     try {
-      const file = await Deno.open("./static" + filepath, { read: true });
-      return new Response(file.readable);
+      return serveFile(req, "./static" + filepath);
     } catch {
       return new Response("404 Not Found", { status: 404 });
     }
+  }
+});
+
+// WEBSOCKET PORT
+Deno.serve({ port: WEBSOCKETPORT, hostname: HOSTNAME }, async (req : Request) => {
+
+  const url = new URL(req.url);
+  const split_path = url.pathname.split("/");
+
+  let body = "";
+  if (req.body) {
+    body = await req.text();
+  }
+
+  // Connect to server (WebSocket/RTC)
+  else if (req.method === "GET" && split_path.length == 3 && split_path[1] === "join") {
+    if (id_list.includes(split_path[2])) {
+      // Lobby exists, connect user
+      return sono.connect(req, () => {
+        console.log("New client connected to lobby " + split_path[2]);
+      });
+    }
+    else {
+      // Lobby does not exist, do nothing
+      return new Response("Lobby not found!", { status: 404 });
+    }
+  }
+
+  else { // If all else fails, 404!
+      return new Response("404 Not Found", { status: 404 });
   }
 });

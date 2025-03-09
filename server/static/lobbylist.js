@@ -1,5 +1,5 @@
 const SERVER_LOCATION = "localhost" // <-- CHANGE HERE AND IN siteserver.ts TO YOUR LOCAL IP TO AVOID SOP!
-const SERVER_PORT = 3000
+const SERVER_PORT = 80 // Shouldn't even need this anymore but whatever
 const SERVER_URL = SERVER_LOCATION + ":" + SERVER_PORT
 
 window.onload = function () {
@@ -31,7 +31,7 @@ function updateList() {
 
 function makeLobbyShowcase(name, id) {
   // Returns an html element representing the given lobby
-  return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | ${id}</p></div><div><button class="joinbutton">JOIN</button> </div></div>`
+  return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | ${id}</p></div><div><button class="joinbutton" onclick="joinLobby('${id}')">JOIN</button> </div></div>`
 }
 
 function updateSuccess(lobbies) {
@@ -65,6 +65,11 @@ function createLobby() {
   // Tries to create a lobby
   fetch("http://" + SERVER_URL + "/lobbies/new", {method: "POST"});
   updateList();
+}
+
+function joinLobby(id) {
+  // Send user to join the given lobby
+  window.location.href = "http://" + SERVER_URL + "/play/" + id;
 }
 
 function main() {

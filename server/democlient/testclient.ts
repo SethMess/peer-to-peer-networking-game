@@ -1,7 +1,7 @@
 import { SonoClient } from 'https://deno.land/x/sono@v1.2/src/sonoClient.js';
 
 const SERVER_URL = "http://localhost:3000"
-const WS_URL = "ws://localhost:3000"
+const WS_URL = "ws://localhost:3001"
 
 async function getLobbies() : Promise<string> {
     // Gets a list of all lobbies
