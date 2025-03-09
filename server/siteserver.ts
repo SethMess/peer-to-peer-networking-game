@@ -83,7 +83,7 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
   // Send them to the game!
   else if (req.method === "GET" && split_path[1] === "play") {
     console.log("SERVING GAMER")
-    const file = await Deno.open("./game/game.html", { read: true, write: false });
+    const file = await Deno.open("./static/game.html", { read: true, write: false });
     return new Response(file.readable);
   }
 
