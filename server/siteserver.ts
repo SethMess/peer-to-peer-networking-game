@@ -3,7 +3,7 @@ import { Sono } from 'https://deno.land/x/sono@v1.2/mod.ts';
 import { serveDir, serveFile } from "jsr:@std/http/file-server";
 
 const sono = new Sono();
-const PORT = 80; // Default HTTP port
+const PORT = 8100; // Default HTTP port
 const WEBSOCKETPORT = 3001 // Chose it cause it is cool B)
 const HOSTNAME = "localhost"; // <-- CHANGE HERE AND IN lobbylist.js TO YOUR LOCAL IP TO AVOID SOP!
 
@@ -83,8 +83,34 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
   // Send them to the game!
   else if (req.method === "GET" && split_path[1] === "play") {
     console.log("SERVING GAMER")
-    const file = await Deno.open("./static/game.html", { read: true, write: false });
-    return new Response(file.readable);
+    // const file = await Deno.open("./static/game.html", { read: true, write: false });
+    // return new Response(file.readable);
+    console.log("SERVING GAMER PATH: " + url.pathname)
+    
+    // If requesting the main HTML page (just /play or /play/{lobby_id})
+    if (split_path.length <= 3 && !url.pathname.includes('.')) {
+      return serveFile(req, "../game/index.html");
+      // return serveFile(req, "./static/game.html");
+    } 
+    // If requesting JavaScript file
+    else if (url.pathname.endsWith('.js')) {
+      return new Response(await Deno.readFile("../game" + url.pathname.substring(5)), {
+        headers: {
+          "Content-Type": "application/javascript"
+        }
+      });
+    }
+    // If requesting other assets
+    else {
+      try {
+        const filePath = "../game" + url.pathname.substring(5);
+        console.log("Attempting to serve: " + filePath);
+        return serveFile(req, filePath);
+      } catch (err) {
+        console.error("Error serving file:", err);
+        return new Response("File not found", { status: 404 });
+      }
+    }
   }
 
   else { // If all else fails, serve a regular file

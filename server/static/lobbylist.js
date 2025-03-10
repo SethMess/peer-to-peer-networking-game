@@ -1,5 +1,5 @@
 const SERVER_LOCATION = "localhost" // <-- CHANGE HERE AND IN siteserver.ts TO YOUR LOCAL IP TO AVOID SOP!
-const SERVER_PORT = 80 // Shouldn't even need this anymore but whatever
+const SERVER_PORT = 8100 // Shouldn't even need this anymore but whatever
 const SERVER_URL = SERVER_LOCATION + ":" + SERVER_PORT
 
 window.onload = function () {
