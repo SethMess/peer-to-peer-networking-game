@@ -1,3 +1,8 @@
+import { SonoClient } from 'https://deno.land/x/sono@v1.2/src/sonoClient.js';
+// import { webRTC } from "https://deno.land/x/sono@v1.1/src/sonoRTC.js"
+
+const WS_URL = "ws://134.87.184.168:3001" // <- UPDATE TO CORRECT URL!!!
+// let sono;
 const canvas = document.querySelector('canvas');
 canvas.width = innerWidth;
 canvas.height = innerHeight;
@@ -82,27 +87,34 @@ class Enemy {
 
 
 
-let animationId
-let score = 0
+let animationId;
+let score = 0;
+let sono;
 function animate() {
     animationId = requestAnimationFrame(animate);
-
     c.clearRect(0, 0, canvas.width, canvas.height);
 
     handleMovement();
-    player.draw();// console.log(projectiles);
+    player.draw();
 
+    // Draw other players
+    otherPlayers.forEach(otherPlayer => {
+        otherPlayer.draw();
+        console.log("updated a foreign player");
+    });
+    console.log("Length of other players: ", otherPlayers.length)
 
     projectiles.forEach((proj) => {
         proj.update();
-    })
+    });
 
     enemies.forEach((enemy) => {
         enemy.update();
-    })
+    });
 
     collisionDetection();
-
+    sendCords(sono);
+    handleMessages(sono);
 }
 
 
@@ -136,7 +148,7 @@ function spawnEnemies() {
         let angle = Math.atan2(player.y - y, player.x - x);
         let velocity = { x: Math.cos(angle), y: Math.sin(angle) };
         enemies.push(new Enemy(x, y, radius, "purple", velocity));
-    }, 1000)
+    }, 4000)
 }
 
 function collisionDetection() {
@@ -149,7 +161,11 @@ function collisionDetection() {
 
         //end game
         if (dist - enemy.radius - player.radius < 1) {
-            cancelAnimationFrame(animationId)
+            cancelAnimationFrame(animationId);
+            sono.broadcast({
+                type: 'close',
+                id: sono.grab('myid')
+            }, 'close');
         }
 
         for (
@@ -200,20 +216,21 @@ function collisionDetection() {
 
 
 function handleMovement() {
+    const speed = 3;
     if (keys.w.pressed) {
-        player.y -= 1;
+        player.y -= 1 * speed;
     }
 
     if (keys.a.pressed) {
-        player.x -= 1;
+        player.x -= 1* speed;
     }
 
     if (keys.s.pressed) {
-        player.y += 1;
+        player.y += 1 * speed;
     }
 
     if (keys.d.pressed) {
-        player.x += 1;
+        player.x += 1 * speed;
     }
 }
 
@@ -226,6 +243,7 @@ let y = canvas.height / 2;
 
 const projectiles = [];
 const enemies = [];
+const otherPlayers = [];
 
 const player = new Player(x, y, 30, 'blue');
 
@@ -253,12 +271,160 @@ spawnEnemies();
 // projectiles.push(projectile);
 
 
-animate();
+// animate();
 
 
+function getOrCreatePlayer(playerId, initialX, initialY) {
+    if(playerId == undefined){
+        playerId = 1;
+    }
+    let player = playerMap.get(playerId);
+    
+    if (!player) {
+        // Create new player if we don't have one yet
+        player = new Player(initialX, initialY, 30, 'red');
+        playerMap.set(playerId, player);
+        otherPlayers.push(player);
+        console.log(`Created new player with ID: ${playerId}`);
+    }
+    
+    return player;
+}
+
+window.onload = function () {
+    main();
+};
+
+function main() {
+    let spliturl = window.location.href.split("/");
+    let lobbyid = spliturl[spliturl.length - 1];
+    let lobbynameelm = document.getElementsByClassName("lobbyname")[0];
+    lobbynameelm.innerHTML = "LOBBY ID: " + lobbyid;
+
+    const sonoConnection = new SonoClient(WS_URL + '/join/' + lobbyid);
+    sono = sonoConnection;
+    waitForConnection(sonoConnection)
+}
+
+// Helper function to debug Sono IDs
+function debugSonoConnection(sono) {
+    console.log("Sono connection details:");
+    console.log("WebSocket ID:", sono.ws);
+    console.log("myid from grab:", sono.grab('mychannelclients'));
+    
+    // Try to inspect the internal state
+    console.log("Sono internal state:", sono);
+    
+    // Check for available methods
+    console.log("Available methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(sono)));
+}
+
+// Call this function right after connection is established
+function waitForConnection(sono) {
+    if(sono.ws.readyState == 0) {
+        globalThis.setTimeout(function() {waitForConnection(sono)}, 1000);
+    } else {
+        debugSonoConnection(sono); // Add debugging
+        gameCode(sono);
+    }
+}
+
+function gameCode(sono) {
+    // Code for the game goes here
+    console.log("CONNECTED!");
+    
+    // Send initial position to everyone using broadcast only
+    sono.broadcast({
+        type: 'join',
+        id: sono.grab('myid'),
+        x: player.x,
+        y: player.y
+    }, 'join');
+    
+    // Setup message handlers
+    handleMessages(sono);
+    
+    // Start the game loop
+    animate();
+}
+
+function sendCords(sono) {
+    sono.broadcast({
+        type: 'position',
+        id: sono.grab('myid'),
+        x: player.x, 
+        y: player.y
+    }, 'position');
+}
+
+// Keep track of other players with their peer IDs
+const playerMap = new Map(); // Map peer IDs to Player objects
+
+function handleMessages(sono) {
+    // When a new peer connects
+    sono.onconnection((peer) => {
+        // payload
+        console.log('New connection from peer:', peer.id); 
+        sono.broadcast({
+            type: 'join',
+            id: sono.ws.id,
+            x: player.x,
+            y: player.y
+        }, 'join');
+        // Send initial position to everyone
+        sono.broadcast({
+            type: 'position',
+            id: sono.grab('myid'),
+            x: player.x,
+            y: player.y
+        }, 'position');
+    });
+
+    sono.on('join', (msg) => {
+        console.log('Join received from peer:', msg.id);
+        // Create a new player for this peer
+        const foreignPlayer = getOrCreatePlayer(msg.id, msg.x, msg.y);
+        
+        sono.broadcast({
+            type: 'join',
+            id: sono.grab('myid'),
+            x: player.x,
+            y: player.y
+        }, 'join');
+        // Store the player with their peer ID
+        // playerMap.set(msg.id, foreignPlayer);
+        // otherPlayers.push(foreignPlayer);
+        
+        // No need to send direct messages back - the broadcast already handled this
+    });
+    
+    // When a peer disconnects
+    sono.on('close', (msg) => {
+        console.log('Peer disconnected:', msg.id);
+        
+        // Remove the player from our map and array
+        const playerToRemove = playerMap.get(msg.id);
+        if (playerToRemove) {
+            const index = otherPlayers.indexOf(playerToRemove);
+            if (index !== -1) {
+                otherPlayers.splice(index, 1);
+            }
+            playerMap.delete(msg.id);
+        }
+    });
+
+    sono.on('position', (msg) => {
+        // Update the position of the player who sent this message
+        if (msg.id && msg.x !== undefined && msg.y !== undefined) {
+            const playerToUpdate = playerMap.get(msg.id);
+            if (playerToUpdate) {
+                playerToUpdate.x = msg.x;
+                playerToUpdate.y = msg.y;
+            }
+        }
+    });
+}
 // Keydown event listener
-
-
 
 // Example of how we might send key inputs to other players, but in a peer to peer game we would just send to the peers instead
 /*
