@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparison of Net-Code Solutions to Lag</title>
     <link rel="stylesheet" href="website/css/style.css">
 </head>
+
 <body>
     <div class="container">
         <h1>Comparison of Net-Code Based Solutions to Lag in Peer-to-Peer Online Games</h1>
@@ -14,24 +16,37 @@
         <h2>Weekly Summaries</h2>
         <div class="button-container">
             <button class="summary-button" onclick="location.href='website/webpages/biweekly1.html'">Bi-Weekly Summary 1</button>
-            <button class="summary-button disabled">Bi-Weekly Summary 2 (Coming Soon)</button>
+            <button class="summary-button" onclick="location.href='website/webpages/biweekly2.html'">Bi-Weekly Summary 2</button>
         </div>
 
 
         <h2>Introduction</h2>
-        <p>Being able to provide players in online games with synchronized game states is an ongoing problem. As games get more complex and the demand for accurate representation of opponents becomes more important, solutions for reducing visual lag on an application level have evolved to improve gameplay quality. Online gaming is a massive market, not only for casual players but also competitive ones, where issues with server quality and delay can cause players to avoid a game entirely. By evaluating and comparing solutions commonly used to diminish the effects of connection delays, we hope to provide strategies developers can choose from based on their project's needs.</p>
+        <p>Being able to provide players in online games with synchronized game states is an ongoing problem. As games
+            get more complex and the demand for accurate representation of opponents becomes more important, solutions
+            for reducing visual lag on an application level have evolved to improve gameplay quality. Online gaming is a
+            massive market, not only for casual players but also competitive ones, where issues with server quality and
+            delay can cause players to avoid a game entirely. By evaluating and comparing solutions commonly used to
+            diminish the effects of connection delays, we hope to provide strategies developers can choose from based on
+            their project's needs.</p>
 
         <h2>Net-Code Methods</h2>
-        <p>Many methods, such as rollback and delay-based net-code, already exist to address the problems described above. Each has its own advantages and disadvantages. Some may perform better in certain environments due to side effects on gameplay or specific multiplayer scenarios. Although individual analyses of these net-code types have been performed, there is limited information comparing them under identical conditions. Providing data on their differences in the same setting offers deeper insights into their strengths and weaknesses.</p>
+        <p>Many methods, such as rollback and delay-based net-code, already exist to address the problems described
+            above. Each has its own advantages and disadvantages. Some may perform better in certain environments due to
+            side effects on gameplay or specific multiplayer scenarios. Although individual analyses of these net-code
+            types have been performed, there is limited information comparing them under identical conditions. Providing
+            data on their differences in the same setting offers deeper insights into their strengths and weaknesses.
+        </p>
 
         <h2>Project Plan</h2>
-        <p>We will develop a simple online game using JavaScript, complex enough to have network quality affect its performance. The project will follow these steps:</p>
+        <p>We will develop a simple online game using JavaScript, complex enough to have network quality affect its
+            performance. The project will follow these steps:</p>
         <ul>
             <li>Implement a baseline net-code system (basic packet sending and receiving).</li>
             <li>Develop two different net-code models: delay-based and rollback.</li>
             <li>Compare their performance under various real or simulated network conditions.</li>
         </ul>
-        <p>While using one of these methods is common, our approach is unique in directly comparing the two side by side.</p>
+        <p>While using one of these methods is common, our approach is unique in directly comparing the two side by
+            side.</p>
 
         <h2>Expected Outcomes</h2>
         <p>By the end of the project, we will have:</p>
@@ -57,8 +72,11 @@
         </ul>
 
         <h2>Hosting and Infrastructure</h2>
-        <p>We are currently deciding who will host the project website and client side on GitHub Pages. An update will be posted on Teams once finalized.</p>
-        <p>The server facilitating P2P will be hosted on <a href="https://render.com/" target="_blank">Render</a>. For NAT traversal, we will use Google’s public STUN servers.</p>
+        <p>We are currently deciding who will host the project website and client side on GitHub Pages. An update will
+            be posted on Teams once finalized.</p>
+        <p>The server facilitating P2P will be hosted on <a href="https://render.com/" target="_blank">Render</a>. For
+            NAT traversal, we will use Google’s public STUN servers.</p>
     </div>
 </body>
+
 </html>
