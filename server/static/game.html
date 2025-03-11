@@ -32,12 +32,39 @@
         text-align: center;
         font-size: 40;
     }
+
+    .pingbutton {
+    margin: auto;
+    width: 20%;
+    border: none;
+    color: white;
+    padding: 1em 2.0em;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    background-color: green;
+    font-family: "Bebas Neue", sans-serif;
+    font-weight: 800;
+    font-size: 1.5em;
+    border: 2px solid darkolivegreen;
+    }
+
+    .pingbutton:disabled{
+    background-color: #000000;
+    }
+    .flex-container-h {
+    display: flex;
+    flex-direction: row;
+    }
 </style>
 </head>
 <body>
 
 <h1>VIDEO GAMES?!</h1>
 <p class="lobbyname">LOADING...</p>
+<div class="flex-container-h">
+<button class="pingbutton">PING!</button>
+</div>
 
 </body>
 </html>
