@@ -3,9 +3,12 @@ import { Sono } from 'https://deno.land/x/sono@v1.2/mod.ts';
 import { serveDir, serveFile } from "jsr:@std/http/file-server";
 
 const sono = new Sono();
-const PORT = 8100; // Default HTTP port
-const WEBSOCKETPORT = 3001 // Chose it cause it is cool B)
-const HOSTNAME = "localhost"; // <-- CHANGE HERE AND IN lobbylist.js TO YOUR LOCAL IP TO AVOID SOP!
+
+// Now takes command line arguments for hosting params
+// EX. deno --allow-net --allow-read siteserver.ts localhost 8100 3001
+const PORT = Deno.args[1]; // Default HTTP port
+const WEBSOCKETPORT = Deno.args[2]; // Chose it cause it is cool B)
+const HOSTNAME = Deno.args[0]; // <-- CHANGE HERE AND IN lobbylist.js TO YOUR LOCAL IP TO AVOID SOP!
 
 class Lobby {
   id = "";

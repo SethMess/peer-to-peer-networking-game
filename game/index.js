@@ -1,7 +1,7 @@
 import { SonoClient } from 'https://deno.land/x/sono@v1.2/src/sonoClient.js';
 // import { webRTC } from "https://deno.land/x/sono@v1.1/src/sonoRTC.js"
 
-const WS_URL = "ws://134.87.184.168:3001" // <- UPDATE TO CORRECT URL!!!
+const WS_URL = "ws://localhost:3001" // <- UPDATE TO CORRECT URL!!!
 // let sono;
 const canvas = document.querySelector('canvas');
 canvas.width = innerWidth;
