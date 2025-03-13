@@ -1,5 +1,5 @@
 import { SonoClient } from 'https://deno.land/x/sono@v1.2/src/sonoClient.js';
-import { SonoRTC } from "./RTC.js"
+import { SonoRTC } from "./backupRTC.js"
 
 const WS_URL = "ws://localhost:3001" // <- UPDATE TO CORRECT URL!!!
 const serverConfig = {
@@ -51,14 +51,6 @@ function gameCode(sono, lobbyid) {
     sono.changeChannel(lobbyid);
     rtc_connection.changeChannel(lobbyid);
     rtc_connection.callback = (message) => messageRecieved(message);
-
-    // Once that's done, enable the ping!
-    sono.broadcast("", "newconnection", (message) => messageRecieved(message));
-
-    // If anyone else joins and sends an arrival message, print it to the console
-    sono.on('newconnection', (payload) => {
-        console.log(payload); // Will look like { message: "Hello!", from: <client_id> } (client id will probably be 100X)
-        });
     
     pingbuttonelm.disabled = false;
     pingbuttonelm.addEventListener("click", function() {rtc_connection.sendMessage("PING!")});

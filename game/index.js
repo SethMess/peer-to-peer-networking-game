@@ -1,15 +1,29 @@
 import { SonoClient } from 'https://deno.land/x/sono@v1.2/src/sonoClient.js';
-// import { webRTC } from "https://deno.land/x/sono@v1.1/src/sonoRTC.js"
+import { SonoRTC } from "./RTC.js"
 
 const WS_URL = "ws://localhost:3001" // <- UPDATE TO CORRECT URL!!!
-// let sono;
+const serverConfig = {
+    iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun.l.google.com:5349" },
+        { urls: "stun:stun1.l.google.com:3478" },
+        { urls: "stun:stun1.l.google.com:5349" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:5349" }
+    ]
+}
+
 const canvas = document.querySelector('canvas');
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 const c = canvas.getContext('2d');
 
-const scoreEl = document.querySelector('#scoreEl')
+let sono = null;
+let rtc = null;
 
+let myid = null;
+
+const scoreEl = document.querySelector('#scoreEl')
 
 console.log("YIPEEE", canvas);
 
@@ -85,11 +99,9 @@ class Enemy {
     }
 }
 
-
-
 let animationId;
 let score = 0;
-let sono;
+
 function animate() {
     animationId = requestAnimationFrame(animate);
     c.clearRect(0, 0, canvas.width, canvas.height);
@@ -113,8 +125,8 @@ function animate() {
     });
 
     collisionDetection();
-    sendCords(sono);
-    handleMessages(sono);
+    sendCords();
+    handleMessages();
 }
 
 
@@ -164,7 +176,7 @@ function collisionDetection() {
             cancelAnimationFrame(animationId);
             sono.broadcast({
                 type: 'close',
-                id: sono.grab('myid')
+                id: myid
             }, 'close');
         }
 
@@ -301,16 +313,14 @@ function main() {
     let lobbynameelm = document.getElementsByClassName("lobbyname")[0];
     lobbynameelm.innerHTML = "LOBBY ID: " + lobbyid;
 
-    const sonoConnection = new SonoClient(WS_URL + '/join/' + lobbyid);
-    sono = sonoConnection;
-    waitForConnection(sonoConnection)
+    sono = new SonoClient(WS_URL + '/join/' + lobbyid);
+    waitForConnection(lobbyid)
 }
 
 // Helper function to debug Sono IDs
 function debugSonoConnection(sono) {
     console.log("Sono connection details:");
     console.log("WebSocket ID:", sono.ws);
-    console.log("myid from grab:", sono.grab('mychannelclients'));
     
     // Try to inspect the internal state
     console.log("Sono internal state:", sono);
@@ -319,39 +329,69 @@ function debugSonoConnection(sono) {
     console.log("Available methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(sono)));
 }
 
+function debugRTCConnection(rtc) {
+    console.log("RTC connection details:");
+    console.log("Server ws:", rtc.server);
+    console.log("channelclients from grab:", rtc.mychannelclients);
+    
+    // Check for available methods
+    console.log("Available methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(rtc)));
+}
+
 // Call this function right after connection is established
-function waitForConnection(sono) {
+function waitForConnection(lobbyid) {
     if(sono.ws.readyState == 0) {
-        globalThis.setTimeout(function() {waitForConnection(sono)}, 1000);
+        globalThis.setTimeout(function() {waitForConnection(lobbyid)}, 1000);
     } else {
-        debugSonoConnection(sono); // Add debugging
-        gameCode(sono);
+        establishRTCConnection(lobbyid);
     }
 }
 
-function gameCode(sono) {
+function establishRTCConnection(lobbyid) {
+    console.log("SONO CONNECTED!");
+
+    rtc = new SonoRTC(serverConfig, sono, {}) // No constraints for now
+    sono.changeChannel(lobbyid);
+    rtc.changeChannel(lobbyid);
+
+    waitForRTCConnection();
+}
+
+function waitForRTCConnection() {
+    if(!rtc.mychannel) {
+        globalThis.setTimeout(function() {waitForRTCConnection()}, 1000);
+    } else {
+        gameCode();
+    }
+}
+
+function gameCode() {
     // Code for the game goes here
-    console.log("CONNECTED!");
+    console.log("RTC CONNECTED!");
+    
+    debugRTCConnection(rtc)
+
+    myid = rtc.myid; // Set myid as a global var as it shouldn't ever change
     
     // Send initial position to everyone using broadcast only
     sono.broadcast({
         type: 'join',
-        id: sono.grab('myid'),
+        id: myid,
         x: player.x,
         y: player.y
     }, 'join');
     
     // Setup message handlers
-    handleMessages(sono);
+    handleMessages();
     
     // Start the game loop
     animate();
 }
 
-function sendCords(sono) {
+function sendCords() {
     sono.broadcast({
         type: 'position',
-        id: sono.grab('myid'),
+        id: myid,
         x: player.x, 
         y: player.y
     }, 'position');
@@ -360,21 +400,21 @@ function sendCords(sono) {
 // Keep track of other players with their peer IDs
 const playerMap = new Map(); // Map peer IDs to Player objects
 
-function handleMessages(sono) {
+function handleMessages() {
     // When a new peer connects
     sono.onconnection((peer) => {
         // payload
         console.log('New connection from peer:', peer.id); 
         sono.broadcast({
             type: 'join',
-            id: sono.ws.id,
+            id: myid,
             x: player.x,
             y: player.y
         }, 'join');
         // Send initial position to everyone
         sono.broadcast({
             type: 'position',
-            id: sono.grab('myid'),
+            id: myid,
             x: player.x,
             y: player.y
         }, 'position');
@@ -387,7 +427,7 @@ function handleMessages(sono) {
         
         sono.broadcast({
             type: 'join',
-            id: sono.grab('myid'),
+            id: myid,
             x: player.x,
             y: player.y
         }, 'join');

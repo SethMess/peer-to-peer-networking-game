@@ -93,10 +93,10 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
     // If requesting the main HTML page (just /play or /play/{lobby_id})
     if (split_path.length <= 3 && !url.pathname.includes('.')) {
       return serveFile(req, "../game/index.html");
-      // return serveFile(req, "./static/game.html");
+      // return serveFile(req, "./static/game.html");  // TEMP path change!
     } 
     // If requesting JavaScript file
-    else if (url.pathname.endsWith('.js')) {
+    else if (url.pathname.endsWith('.js')) { // TEMP false!
       return new Response(await Deno.readFile("../game" + url.pathname.substring(5)), {
         headers: {
           "Content-Type": "application/javascript"
