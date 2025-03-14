@@ -20,6 +20,7 @@ const c = canvas.getContext('2d');
 
 let sono = null;
 let rtc = null;
+let current_player_list = [];
 
 let myid = null;
 
@@ -106,15 +107,17 @@ function animate() {
     animationId = requestAnimationFrame(animate);
     c.clearRect(0, 0, canvas.width, canvas.height);
 
+    handlePeerListChanges()
     handleMovement();
+
     player.draw();
 
     // Draw other players
     otherPlayers.forEach(otherPlayer => {
         otherPlayer.draw();
-        console.log("updated a foreign player");
+        // console.log("updated a foreign player");
     });
-    console.log("Length of other players: ", otherPlayers.length)
+    // console.log("Length of other players: ", otherPlayers.length)
 
     projectiles.forEach((proj) => {
         proj.update();
@@ -131,6 +134,42 @@ function animate() {
 
 
 // function collisionDetection
+
+function peerLeft(peerid) {
+    // Called when a peer leaves
+    console.log("PEER LEFT: " + peerid);
+}
+
+function peerJoined(peerid) {
+    // Called when a peer leaves
+    console.log("PEER JOINED: " + peerid);
+}
+
+//
+function handlePeerListChanges() {
+    // Function that checks if any players have left or joined the game and acts accordingly
+    let new_player_list = rtc.mychannelclients;
+    if (new_player_list == current_player_list) {
+        return; // If there is nothing to update, return
+    }
+    
+    // Somebody left?
+    current_player_list.forEach(function(id) {
+        if (!new_player_list.includes(id)) {
+            peerLeft(id)
+        }
+    });
+
+    // Somebody joined?
+    new_player_list.forEach(function(id) {
+        if (!current_player_list.includes(id)) {
+            peerJoined(id)
+        }
+    });
+
+    // Update current player list
+    current_player_list = new_player_list
+}
 
 //Event listeners
 addEventListener('click', (event) => {
@@ -276,7 +315,7 @@ const keys = {
 
 // player.draw();
 
-spawnEnemies();
+// spawnEnemies(); <- TEMP disabled to make testing easier
 // let projectile = new Projectile(player.x, player.y, 5, 'red', {x: 1, y: 1});
 // projectile.draw();
 // projectile.update();
@@ -368,10 +407,9 @@ function waitForRTCConnection() {
 function gameCode() {
     // Code for the game goes here
     console.log("RTC CONNECTED!");
-    
-    debugRTCConnection(rtc)
 
     myid = rtc.myid; // Set myid as a global var as it shouldn't ever change
+    current_player_list = rtc.mychannelclients; // RTC keeps an updated player list from the sono server
     
     // Send initial position to everyone using broadcast only
     sono.broadcast({
@@ -381,8 +419,11 @@ function gameCode() {
         y: player.y
     }, 'join');
     
-    // Setup message handlers
+    // Setup message handlers for sono and RTC
     handleMessages();
+    rtc.callback = (message) => handleRTCMessages(message);
+
+    rtc.sendMessage("PING!");
     
     // Start the game loop
     animate();
@@ -464,6 +505,12 @@ function handleMessages() {
         }
     });
 }
+
+function handleRTCMessages(message) {
+    // Placeholder
+    console.log(message)
+}
+
 // Keydown event listener
 
 // Example of how we might send key inputs to other players, but in a peer to peer game we would just send to the peers instead
