@@ -1,7 +1,7 @@
 import { SonoClient } from 'https://deno.land/x/sono@v1.2/src/sonoClient.js';
 import { SonoRTC } from "./RTC.js"
 
-const WS_URL = "ws://localhost:3001" // <- UPDATE TO CORRECT URL!!!
+const WS_URL = "ws://192.168.86.231:3001" // <- UPDATE TO CORRECT URL!!!
 const serverConfig = {
     iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
@@ -17,6 +17,8 @@ const canvas = document.querySelector('canvas');
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 const c = canvas.getContext('2d');
+const player_poll_frames = 120; // How many frames we wait before sending each channel refersh request
+let poll_counter = 0;
 
 let sono = null;
 let rtc = null;
@@ -113,11 +115,9 @@ function animate() {
     player.draw();
 
     // Draw other players
-    otherPlayers.forEach(otherPlayer => {
-        otherPlayer.draw();
-        // console.log("updated a foreign player");
-    });
-    // console.log("Length of other players: ", otherPlayers.length)
+    for (const [_id, playerobj] of playerMap) { // Using the default iterator (could be `map.entries()` instead)
+        playerobj.draw();
+    }
 
     projectiles.forEach((proj) => {
         proj.update();
@@ -138,19 +138,33 @@ function animate() {
 function peerLeft(peerid) {
     // Called when a peer leaves
     console.log("PEER LEFT: " + peerid);
+    removePlayer(peerid, 0, 0);
 }
 
 function peerJoined(peerid) {
     // Called when a peer leaves
     console.log("PEER JOINED: " + peerid);
+    getOrCreatePlayer(peerid, 0, 0);
 }
 
 //
 function handlePeerListChanges() {
     // Function that checks if any players have left or joined the game and acts accordingly
+
+    // We have to manually refresh the server
+    poll_counter += 1;
+    if (poll_counter >= player_poll_frames) {
+        rtc.server.grab('mychannelclients');
+        poll_counter = 0;
+    } else {
+        return;
+    }
+
     let new_player_list = rtc.mychannelclients;
-    if (new_player_list == current_player_list) {
+    if (new_player_list === current_player_list) {
         return; // If there is nothing to update, return
+    } else {
+        console.log("UPDATED PLAYER LIST: " + new_player_list);
     }
     
     // Somebody left?
@@ -169,6 +183,7 @@ function handlePeerListChanges() {
 
     // Update current player list
     current_player_list = new_player_list
+    rtc.createRTCs(); // Adds needed channels for sending messages
 }
 
 //Event listeners
@@ -294,7 +309,6 @@ let y = canvas.height / 2;
 
 const projectiles = [];
 const enemies = [];
-const otherPlayers = [];
 
 const player = new Player(x, y, 30, 'blue');
 
@@ -335,11 +349,14 @@ function getOrCreatePlayer(playerId, initialX, initialY) {
         // Create new player if we don't have one yet
         player = new Player(initialX, initialY, 30, 'red');
         playerMap.set(playerId, player);
-        otherPlayers.push(player);
         console.log(`Created new player with ID: ${playerId}`);
     }
     
     return player;
+}
+
+function removePlayer(playerId) {
+    playerMap.delete(playerId);
 }
 
 window.onload = function () {
@@ -411,31 +428,23 @@ function gameCode() {
     myid = rtc.myid; // Set myid as a global var as it shouldn't ever change
     current_player_list = rtc.mychannelclients; // RTC keeps an updated player list from the sono server
     
-    // Send initial position to everyone using broadcast only
-    sono.broadcast({
-        type: 'join',
-        id: myid,
-        x: player.x,
-        y: player.y
-    }, 'join');
+    // Create other players for players in game
+    current_player_list.forEach(function(playerid) {
+        if (playerid != myid) {
+            getOrCreatePlayer(playerid, -10, -10);
+        }
+    })
     
     // Setup message handlers for sono and RTC
-    handleMessages();
+    //handleMessages();
     rtc.callback = (message) => handleRTCMessages(message);
-
-    rtc.sendMessage("PING!");
     
     // Start the game loop
     animate();
 }
 
 function sendCords() {
-    sono.broadcast({
-        type: 'position',
-        id: myid,
-        x: player.x, 
-        y: player.y
-    }, 'position');
+    rtc.sendMessage("pos|" + myid + "|" + JSON.stringify({x: player.x, y: player.y}))
 }
 
 // Keep track of other players with their peer IDs
@@ -507,8 +516,30 @@ function handleMessages() {
 }
 
 function handleRTCMessages(message) {
-    // Placeholder
-    console.log(message)
+    // Each RTC Message comes in the format of eventname|senderid|JSONobject
+    console.log("RTC: " + message.data);
+    let split_message = message.data.split("|");
+    let eventname = split_message[0];
+    let senderid = split_message[1];
+    let packetdata = JSON.parse(split_message[2]);
+
+    // Left game messages
+    if (eventname == "left") {
+        removePlayer(senderid);
+        return;
+    }
+
+    // Location update messages
+    if (eventname == "pos" && current_player_list.includes(senderid)) {
+        console.log("PLAYER POS: " + packetdata.x + ", " + packetdata.y);
+        let edit_player = playerMap.get(senderid);
+        edit_player.x = Number(packetdata.x)
+        edit_player.y = Number(packetdata.y)
+        playerMap.set(senderid, edit_player)
+
+        console.print
+        return;
+    }
 }
 
 // Keydown event listener

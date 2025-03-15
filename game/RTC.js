@@ -16,8 +16,8 @@ export class SonoRTC {
     console.log("Setting up event listeners");
 
     this.server.on('grab', (payload) => {
-      console.log("Grabbing: " + payload.type);
-      console.log(payload.message);
+      //console.log("Grabbing: " + payload.type);
+      //console.log(payload.message);
       if(payload.type === 'clients'){
         this.clients = payload.message;
         if(this.mychannelclients && this.myid && this.mychannel){
@@ -189,13 +189,13 @@ export class SonoRTC {
 
   sendMessage(message) {
     // Send message to all clients
-    console.log(this.mychannelclients);
+    //console.log(this.mychannelclients);
     this.mychannelclients.forEach(client => {
-      if(client === this.myid){
+      if(client === this.myid || this.dataStreams[client].readyState != "open"){
         // NOTHING FOR YOURSEWL
       } else {
         this.dataStreams[client].send(message);
-        console.log("Sending message to " + this.dataStreams[client]);
+        console.log("Sending message to " + client);
       }
     })
   }
