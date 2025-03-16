@@ -1,7 +1,7 @@
 import { SonoClient } from 'https://deno.land/x/sono@v1.2/src/sonoClient.js';
 import { SonoRTC } from "./RTC.js"
 
-const WS_URL = "ws://192.168.86.231:3001" // <- UPDATE TO CORRECT URL!!!
+const WS_URL = "ws://localhost:3001" // <- UPDATE TO CORRECT URL!!!
 const serverConfig = {
     iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
@@ -409,6 +409,7 @@ function establishRTCConnection(lobbyid) {
     rtc = new SonoRTC(serverConfig, sono, {}) // No constraints for now
     sono.changeChannel(lobbyid);
     rtc.changeChannel(lobbyid);
+    rtc.callback = (message) => handleRTCMessages(message);
 
     waitForRTCConnection();
 }
@@ -427,6 +428,8 @@ function gameCode() {
 
     myid = rtc.myid; // Set myid as a global var as it shouldn't ever change
     current_player_list = rtc.mychannelclients; // RTC keeps an updated player list from the sono server
+
+    console.log(rtc.dataStreams)
     
     // Create other players for players in game
     current_player_list.forEach(function(playerid) {
@@ -443,7 +446,7 @@ function gameCode() {
     animate();
 }
 
-function sendCords() {
+function sendCords() { // TEMP DISABLED
     rtc.sendMessage("pos|" + myid + "|" + JSON.stringify({x: player.x, y: player.y}))
 }
 

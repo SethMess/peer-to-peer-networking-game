@@ -155,7 +155,6 @@ export class SonoRTC {
       this.remoteconnections[client].ondatachannel = (event) => {
 
         this.receiveChannels[client] = event.channel;
-        console.log(this.callback)
         this.receiveChannels[client].onmessage = this.callback;
         // this.dataStreams[client].onopen = callbacks can be added if needed
         // this.dataStreams[client].onclose = callbacks can be added if needed
