@@ -75,6 +75,38 @@ class Projectile {
     }
 }
 
+class Laser {
+    constructor(x, y, targetX, targetY, color, duration = 200) {
+        this.startX = x;
+        this.startY = y;
+        this.endX = targetX;
+        this.endY = targetY;
+        this.color = color;
+        this.startTime = Date.now();
+        this.duration = duration;
+    }
+
+    draw() {
+        const elapsed = Date.now() - this.startTime;
+        const opacity = 1 - (elapsed / this.duration);
+        
+        if (opacity <= 0) return false;
+        
+        c.beginPath();
+        c.moveTo(this.startX, this.startY);
+        c.lineTo(this.endX, this.endY);
+        c.strokeStyle = this.color;
+        c.globalAlpha = opacity;
+        c.lineWidth = 3;
+        c.stroke();
+        c.globalAlpha = 1;
+        
+        return true;
+    }
+}
+
+
+
 
 class Enemy {
     constructor(x, y, radius, color, velocity) {
@@ -109,7 +141,7 @@ function animate() {
     animationId = requestAnimationFrame(animate);
     c.clearRect(0, 0, canvas.width, canvas.height);
 
-    handlePeerListChanges()
+    handlePeerListChanges();
     handleMovement();
 
     // Draw local player
@@ -124,10 +156,13 @@ function animate() {
     for (const [_id, proj] of projectileMap) {
         proj.draw();
     }
-
-    // Update and draw local projectiles
-    // Note: local projectiles are now updated in sendCords() 
-    // to avoid duplicating update logic
+    
+    // Draw active lasers and remove expired ones
+    for (let i = lasers.length - 1; i >= 0; i--) {
+        if (!lasers[i].draw()) {
+            lasers.splice(i, 1);
+        }
+    }
 
     // Update enemies
     enemies.forEach((enemy) => {
@@ -135,14 +170,13 @@ function animate() {
     });
 
     // Check for collisions
-    collisionDetection(); // UPDATE TO HANDLE OTHER PLAYER AND PROJ collitions
+    collisionDetection();
     
     // Send updates to peers
     sendCords();
 }
 
 
-// function collisionDetection
 
 function peerLeft(peerid) {
     // Called when a peer leaves
@@ -197,30 +231,112 @@ function handlePeerListChanges() {
 
 //Event listeners
 addEventListener('click', (event) => {
-    console.log("spawn");
-    let angle = Math.atan2(event.clientY - player.y, event.clientX - player.x);
-    let velocity = { x: Math.cos(angle) * 2, y: Math.sin(angle) * 2 };
-    // velocity = velocity * 2;
-    // Generate a unique ID for this projectile
-    const projectileId = generateProjectileId();
-    
-    // Create projectile and add to local arrays/maps
-    const projectile = new Projectile(player.x, player.y, 5, 'green', velocity);
-    projectiles.push(projectile);
-    
-    // Add to the projectile map with its unique ID
-    projectileMap.set(projectileId, projectile);
-    
-    // Broadcast this new projectile to other players
-    rtc.sendMessage("newproj|" + myid + "|" + JSON.stringify({
-        id: projectileId,
-        x: projectile.x, 
-        y: projectile.y,
-        vx: velocity.x,
-        vy: velocity.y,
-        radius: projectile.radius
-    }));
+    if (currentWeapon === WEAPON_TYPES.PROJECTILE) {
+        // Original projectile code
+        let angle = Math.atan2(event.clientY - player.y, event.clientX - player.x);
+        let velocity = { x: Math.cos(angle) * 2, y: Math.sin(angle) * 2 };
+        
+        // Generate a unique ID for this projectile
+        const projectileId = generateProjectileId();
+        
+        // Create projectile and add to local arrays/maps
+        const projectile = new Projectile(player.x, player.y, 5, 'green', velocity);
+        projectiles.push(projectile);
+        
+        // Add to the projectile map with its unique ID
+        projectileMap.set(projectileId, projectile);
+        
+        // Broadcast this new projectile to other players
+        rtc.sendMessage("newproj|" + myid + "|" + JSON.stringify({
+            id: projectileId,
+            x: projectile.x, 
+            y: projectile.y,
+            vx: velocity.x,
+            vy: velocity.y,
+            radius: projectile.radius
+        }));
+    } 
+    else if (currentWeapon === WEAPON_TYPES.HITSCAN) {
+        // Check cooldown
+        const currentTime = Date.now();
+        if (currentTime - lastHitscanTime < HITSCAN_COOLDOWN) {
+            console.log(`Hitscan cooling down (${Math.floor((HITSCAN_COOLDOWN - (currentTime - lastHitscanTime)) / 100) / 10}s)`);
+            return;
+        }
+        
+        lastHitscanTime = currentTime;
+        // Calculate trajectory
+        let angle = Math.atan2(event.clientY - player.y, event.clientX - player.x);
+        
+        // Calculate maximum distance (or use canvas dimensions for sight range)
+        const maxDistance = 1000;
+        const targetX = player.x + Math.cos(angle) * maxDistance;
+        const targetY = player.y + Math.sin(angle) * maxDistance;
+        
+        // Create and add laser effect
+        const laser = new Laser(player.x, player.y, targetX, targetY, 'rgba(255, 0, 0, 0.7)');
+        lasers.push(laser);
+        
+        // Broadcast laser shot to other players
+        rtc.sendMessage("laser|" + myid + "|" + JSON.stringify({
+            startX: player.x,
+            startY: player.y,
+            endX: targetX,
+            endY: targetY
+        }));
+        
+        // Perform hit detection immediately (since hitscan is instant)
+        performHitscanDetection(player.x, player.y, angle, maxDistance);
+    }
 });
+
+function performHitscanDetection(startX, startY, angle, maxDistance) {
+    // Check for hits on other players
+    let closestHit = null;
+    let closestDistance = maxDistance;
+    
+    // Check each player for hits
+    for (const [playerId, otherPlayer] of playerMap.entries()) {
+        if (playerId === myid) continue; // Skip self
+        
+        // Calculate if the laser intersects with this player's circle
+        const dx = otherPlayer.x - startX;
+        const dy = otherPlayer.y - startY;
+        
+        // Calculate the closest point on the line to the circle center
+        const projectionLength = dx * Math.cos(angle) + dy * Math.sin(angle);
+        
+        if (projectionLength < 0) continue; // Behind the laser origin
+        if (projectionLength > closestDistance) continue; // Beyond our current closest hit
+        
+        // Calculate closest point on the line to the circle center
+        const closestX = startX + Math.cos(angle) * projectionLength;
+        const closestY = startY + Math.sin(angle) * projectionLength;
+        
+        // Check if this point is within the player's radius
+        const distance = Math.hypot(closestX - otherPlayer.x, closestY - otherPlayer.y);
+        
+        if (distance <= otherPlayer.radius) {
+            // We have a hit! Check if it's closer than any previous hit
+            if (projectionLength < closestDistance) {
+                closestHit = playerId;
+                closestDistance = projectionLength;
+            }
+        }
+    }
+    
+    // If we hit someone, send the hit message
+    if (closestHit) {
+        console.log("Hit player with laser:", closestHit);
+        
+        // Notify the hit player
+        rtc.sendMessage("hit|" + closestHit + "|" + JSON.stringify({
+            by: myid,
+            weapon: WEAPON_TYPES.HITSCAN,
+            damage: 10 // Hitscan does more damage
+        }));
+    }
+}
 
 
 function spawnEnemies() {
@@ -388,31 +504,6 @@ function handleMovement() {
 }
 
 
-//MAIN area
-
-let x = canvas.width / 2;
-let y = canvas.height / 2;
-
-
-const projectiles = [];
-const enemies = [];
-
-const player = new Player(x, y, 30, 'blue');
-
-const keys = {
-    w: {
-        pressed: false
-    },
-    a: {
-        pressed: false
-    },
-    s: {
-        pressed: false
-    },
-    d: {
-        pressed: false
-    }
-}
 
 // player.draw();
 
@@ -566,9 +657,46 @@ function sendCords() { // TEMP DISABLED
     
 }
 
+const WEAPON_TYPES = {
+    PROJECTILE: 'projectile',
+    HITSCAN: 'hitscan'
+};
+  
+let currentWeapon = WEAPON_TYPES.PROJECTILE; 
+let lastHitscanTime = 0;
+const HITSCAN_COOLDOWN = 1000; // 1 second cooldown
 // Keep track of other players with their peer IDs
 const playerMap = new Map(); // Map peer IDs to Player objects
 const projectileMap = new Map();
+
+//MAIN area
+
+let x = canvas.width / 2;
+let y = canvas.height / 2;
+
+
+const projectiles = [];
+// Add a global array to store active lasers
+const lasers = [];
+const enemies = [];
+
+const player = new Player(x, y, 30, 'blue');
+
+const keys = {
+    w: {
+        pressed: false
+    },
+    a: {
+        pressed: false
+    },
+    s: {
+        pressed: false
+    },
+    d: {
+        pressed: false
+    }
+}
+
 
 // Generate unique IDs for projectiles
 let projectileCounter = 0;
@@ -644,8 +772,9 @@ function handleRTCMessages(message) {
     if (eventname == "hit" && senderid === myid) {
         console.log("You were hit by player", packetdata.by);
         
-        // Implement hit effects - reduce player size, health, etc.
-        player.radius = Math.max(10, player.radius - 5); // Don't go below 10
+        // Implement hit effects - reduce player size/health based on weapon type
+        const damage = packetdata.weapon === WEAPON_TYPES.HITSCAN ? 10 : 5;
+        player.radius = Math.max(10, player.radius - damage);
         
         // Check if player is now "dead"
         if (player.radius <= 10) {
@@ -656,42 +785,25 @@ function handleRTCMessages(message) {
         }
         return;
     }
+
+    // Add this to your existing handleRTCMessages function
+    if (eventname == "laser" && current_player_list.includes(senderid)) {
+        console.log("Laser received from:", senderid);
+        
+        // Create a laser visual effect
+        const laser = new Laser(
+            Number(packetdata.startX),
+            Number(packetdata.startY),
+            Number(packetdata.endX),
+            Number(packetdata.endY),
+            'rgba(255, 0, 0, 0.7)'
+        );
+        lasers.push(laser);
+        return;
+    }
 }
 
 // Keydown event listener
-
-// Example of how we might send key inputs to other players, but in a peer to peer game we would just send to the peers instead
-/*
-setInterval(() => {
-    if (keys.w.pressed) {
-      sequenceNumber++
-      playerInputs.push({ sequenceNumber, dx: 0, dy: -SPEED })
-      // frontEndPlayers[socket.id].y -= SPEED
-      socket.emit('keydown', { keycode: 'KeyW', sequenceNumber })
-    }
-
-    if (keys.a.pressed) {
-      sequenceNumber++
-      playerInputs.push({ sequenceNumber, dx: -SPEED, dy: 0 })
-      // frontEndPlayers[socket.id].x -= SPEED
-      socket.emit('keydown', { keycode: 'KeyA', sequenceNumber })
-    }
-
-    if (keys.s.pressed) {
-      sequenceNumber++
-      playerInputs.push({ sequenceNumber, dx: 0, dy: SPEED })
-      // frontEndPlayers[socket.id].y += SPEED
-      socket.emit('keydown', { keycode: 'KeyS', sequenceNumber })
-    }
-
-    if (keys.d.pressed) {
-      sequenceNumber++
-      playerInputs.push({ sequenceNumber, dx: SPEED, dy: 0 })
-      // frontEndPlayers[socket.id].x += SPEED
-      socket.emit('keydown', { keycode: 'KeyD', sequenceNumber })
-    }
-  }, 15)
-  */
 
 window.addEventListener('keydown', (event) => {
     //check if its a front end player and return if not
@@ -711,6 +823,40 @@ window.addEventListener('keydown', (event) => {
 
         case 'KeyD':
             keys.d.pressed = true
+            break
+        
+        case 'KeyQ': // Q key switches weapons
+            // Toggle between weapon types
+            currentWeapon = currentWeapon === WEAPON_TYPES.PROJECTILE ? 
+                WEAPON_TYPES.HITSCAN : WEAPON_TYPES.PROJECTILE;
+            
+            // Notify the player which weapon is active
+            console.log(`Switched to ${currentWeapon} weapon`);
+            
+            // Optional: Display weapon type on screen
+            const weaponTypeDisplay = document.createElement('div');
+            weaponTypeDisplay.style.position = 'absolute';
+            weaponTypeDisplay.style.top = '40px';
+            weaponTypeDisplay.style.left = '8px';
+            weaponTypeDisplay.style.color = 'white';
+            weaponTypeDisplay.style.fontFamily = 'sans-serif';
+            weaponTypeDisplay.style.padding = '5px';
+            weaponTypeDisplay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            weaponTypeDisplay.textContent = `Weapon: ${currentWeapon.toUpperCase()}`;
+            weaponTypeDisplay.id = 'weaponTypeDisplay';
+            
+            // Remove previous display if it exists
+            const oldDisplay = document.getElementById('weaponTypeDisplay');
+            if (oldDisplay) document.body.removeChild(oldDisplay);
+            
+            document.body.appendChild(weaponTypeDisplay);
+            
+            // Fade out after 2 seconds
+            setTimeout(() => {
+                weaponTypeDisplay.style.transition = 'opacity 1s';
+                weaponTypeDisplay.style.opacity = '0';
+            }, 2000);
+            
             break
     }
 })
