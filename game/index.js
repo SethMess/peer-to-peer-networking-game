@@ -112,24 +112,33 @@ function animate() {
     handlePeerListChanges()
     handleMovement();
 
+    // Draw local player
     player.draw();
 
     // Draw other players
-    for (const [_id, playerobj] of playerMap) { // Using the default iterator (could be `map.entries()` instead)
+    for (const [_id, playerobj] of playerMap) {
         playerobj.draw();
     }
 
-    projectiles.forEach((proj) => {
-        proj.update();
-    });
+    // Draw all projectiles from the projectile map 
+    for (const [_id, proj] of projectileMap) {
+        proj.draw();
+    }
 
+    // Update and draw local projectiles
+    // Note: local projectiles are now updated in sendCords() 
+    // to avoid duplicating update logic
+
+    // Update enemies
     enemies.forEach((enemy) => {
         enemy.update();
     });
 
-    collisionDetection();
+    // Check for collisions
+    collisionDetection(); // UPDATE TO HANDLE OTHER PLAYER AND PROJ collitions
+    
+    // Send updates to peers
     sendCords();
-    handleMessages();
 }
 
 
@@ -192,9 +201,25 @@ addEventListener('click', (event) => {
     let angle = Math.atan2(event.clientY - player.y, event.clientX - player.x);
     let velocity = { x: Math.cos(angle) * 2, y: Math.sin(angle) * 2 };
     // velocity = velocity * 2;
+    // Generate a unique ID for this projectile
+    const projectileId = generateProjectileId();
+    
+    // Create projectile and add to local arrays/maps
     const projectile = new Projectile(player.x, player.y, 5, 'green', velocity);
     projectiles.push(projectile);
-
+    
+    // Add to the projectile map with its unique ID
+    projectileMap.set(projectileId, projectile);
+    
+    // Broadcast this new projectile to other players
+    rtc.sendMessage("newproj|" + myid + "|" + JSON.stringify({
+        id: projectileId,
+        x: projectile.x, 
+        y: projectile.y,
+        vx: velocity.x,
+        vy: velocity.y,
+        radius: projectile.radius
+    }));
 });
 
 
@@ -218,63 +243,125 @@ function spawnEnemies() {
 }
 
 function collisionDetection() {
-    for (let index = enemies.length - 1; index >= 0; index--) {
-        const enemy = enemies[index]
+    // 1. Check enemy collisions with players and projectiles
+    // for (let index = enemies.length - 1; index >= 0; index--) {
+    //     const enemy = enemies[index];
 
-        // enemy.update()
+    //     // Check if player collides with enemy
+    //     const playerEnemyDist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+    //     if (playerEnemyDist - enemy.radius - player.radius < 1) {
+    //         cancelAnimationFrame(animationId);
+    //         rtc.sendMessage("left|" + myid + "|{}");
+    //         console.log("Game over - hit by enemy!");
+    //         // You could add a game over screen here
+    //         return;
+    //     }
 
-        const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y)
+    //     // Check all projectiles for collisions with enemies
+    //     for (const [projId, projectile] of projectileMap.entries()) {
+    //         const projEnemyDist = Math.hypot(projectile.x - enemy.x, projectile.y - enemy.y);
 
-        //end game
-        if (dist - enemy.radius - player.radius < 1) {
-            cancelAnimationFrame(animationId);
-            sono.broadcast({
-                type: 'close',
-                id: myid
-            }, 'close');
+    //         // When projectiles touch enemy
+    //         if (projEnemyDist - enemy.radius - projectile.radius < 1) {
+    //             // Check if it's the local player's projectile (for scoring)
+    //             const isLocalProjectile = projId.startsWith(myid);
+
+    //             // Handle enemy hit logic
+    //             if (enemy.radius - 10 > 5) {
+    //                 // Only increase score if it's your projectile
+    //                 if (isLocalProjectile) {
+    //                     score += 100;
+    //                     scoreEl.innerHTML = score;
+    //                 }
+    //                 enemy.radius -= 10;
+
+    //                 // Remove the projectile
+    //                 projectileMap.delete(projId);
+    //                 if (isLocalProjectile) {
+    //                     // Only notify about deletion if it's your projectile
+    //                     rtc.sendMessage("projdel|" + myid + "|" + JSON.stringify({
+    //                         id: projId
+    //                     }));
+    //                 }
+    //             } else {
+    //                 // Remove enemy if they are too small
+    //                 if (isLocalProjectile) {
+    //                     score += 150;
+    //                     scoreEl.innerHTML = score;
+    //                 }
+    //                 enemies.splice(index, 1);
+                    
+    //                 // Remove the projectile
+    //                 projectileMap.delete(projId);
+    //                 if (isLocalProjectile) {
+    //                     rtc.sendMessage("projdel|" + myid + "|" + JSON.stringify({
+    //                         id: projId
+    //                     }));
+    //                 }
+    //             }
+    //             break; // Exit the projectile loop for this enemy
+    //         }
+    //     }
+    // }
+
+    // 2. Check collisions between projectiles and other players
+    for (const [projId, projectile] of projectileMap.entries()) {
+        // Skip if it's the local player's projectile (players can't hit themselves)
+        const projectileOwner = projId.split('-')[0]; // Extract owner ID from projectile ID
+        if (projectileOwner === myid) continue;
+
+        // Check if this projectile hits the local player
+        const projPlayerDist = Math.hypot(projectile.x - player.x, projectile.y - player.y);
+        if (projPlayerDist - player.radius - projectile.radius < 1) {
+            // Player was hit by another player's projectile
+            console.log("Hit by projectile from player:", projectileOwner);
+            
+            // Remove the projectile
+            projectileMap.delete(projId);
+            
+            // Reduce player health/size or implement other hit effects
+            player.radius = Math.max(10, player.radius - 5); // Shrink but don't go below 10
+            
+            // Notify other players about the hit
+            rtc.sendMessage("hit|" + myid + "|" + JSON.stringify({
+                by: projectileOwner,
+                projId: projId
+            }));
+            
+            // You could implement a death mechanism if player gets too small
+            if (player.radius <= 10) {
+                cancelAnimationFrame(animationId);
+                rtc.sendMessage("left|" + myid + "|{}");
+                console.log("Game over - killed by player", projectileOwner);
+                // Show game over screen
+            }
         }
-
-        for (
-            let projectilesIndex = projectiles.length - 1;
-            projectilesIndex >= 0;
-            projectilesIndex--
-        ) {
-            const projectile = projectiles[projectilesIndex]
-
-            const dist = Math.hypot(projectile.x - enemy.x, projectile.y - enemy.y)
-
-            // when projectiles touch enemy
-            if (dist - enemy.radius - projectile.radius < 1) {
-                // create explosions
-                // for (let i = 0; i < enemy.radius * 2; i++) {
-                //     particles.push(
-                //         new Particle(
-                //             projectile.x,
-                //             projectile.y,
-                //             Math.random() * 2,
-                //             enemy.color,
-                //             {
-                //                 x: (Math.random() - 0.5) * (Math.random() * 6),
-                //                 y: (Math.random() - 0.5) * (Math.random() * 6)
-                //             }
-                //         )
-                //     )
-                // }
-                // this is where we shrink our enemy
-                if (enemy.radius - 10 > 5) {
-                    score += 100;
-                    scoreEl.innerHTML = score;
-                    enemy.radius -= 10;
-
-                    projectiles.splice(projectilesIndex, 1)
-                } else {
-                    // remove enemy if they are too small
-                    score += 150;
-                    scoreEl.innerHTML = score;
-
-                    enemies.splice(index, 1);
-                    projectiles.splice(projectilesIndex, 1);
+        
+        // Check if this projectile hits any other players
+        for (const [otherPlayerId, otherPlayer] of playerMap.entries()) {
+            // Skip if it's the projectile owner (can't hit yourself)
+            if (otherPlayerId === projectileOwner) continue;
+            
+            const projOtherPlayerDist = Math.hypot(projectile.x - otherPlayer.x, projectile.y - otherPlayer.y);
+            if (projOtherPlayerDist - otherPlayer.radius - projectile.radius < 1) {
+                // Another player was hit by someone's projectile
+                
+                // Only remove the projectile if it's your projectile
+                if (projectileOwner === myid) {
+                    projectileMap.delete(projId);
+                    rtc.sendMessage("projdel|" + myid + "|" + JSON.stringify({
+                        id: projId
+                    }));
+                    
+                    // Signal a hit - this lets the other player know they were hit
+                    rtc.sendMessage("hit|" + otherPlayerId + "|" + JSON.stringify({
+                        by: myid,
+                        projId: projId
+                    }));
                 }
+                
+                // The size reduction will be handled by the hit player themselves
+                break;
             }
         }
     }
@@ -447,75 +534,46 @@ function gameCode() {
 }
 
 function sendCords() { // TEMP DISABLED
-    rtc.sendMessage("pos|" + myid + "|" + JSON.stringify({x: player.x, y: player.y}))
+    // Send player position
+    rtc.sendMessage("pos|" + myid + "|" + JSON.stringify({
+        x: player.x, 
+        y: player.y,
+        radius: player.radius
+    }));
+    
+    // Send projectile positions
+    projectileMap.forEach((projectile, id) => {
+        // Update projectile position
+        projectile.update();
+        
+        // Send updated position to peers
+        rtc.sendMessage("projpos|" + myid + "|" + JSON.stringify({
+            id: id,
+            x: projectile.x, 
+            y: projectile.y
+        }));
+        
+        // Remove projectiles that are off-screen
+        if (projectile.x < -50 || projectile.x > canvas.width + 50 || 
+            projectile.y < -50 || projectile.y > canvas.height + 50) {
+            projectileMap.delete(id);
+            // Notify peers that projectile should be removed
+            rtc.sendMessage("projdel|" + myid + "|" + JSON.stringify({
+                id: id
+            }));
+        }
+    });
+    
 }
 
 // Keep track of other players with their peer IDs
 const playerMap = new Map(); // Map peer IDs to Player objects
+const projectileMap = new Map();
 
-function handleMessages() {
-    // When a new peer connects
-    sono.onconnection((peer) => {
-        // payload
-        console.log('New connection from peer:', peer.id); 
-        sono.broadcast({
-            type: 'join',
-            id: myid,
-            x: player.x,
-            y: player.y
-        }, 'join');
-        // Send initial position to everyone
-        sono.broadcast({
-            type: 'position',
-            id: myid,
-            x: player.x,
-            y: player.y
-        }, 'position');
-    });
-
-    sono.on('join', (msg) => {
-        console.log('Join received from peer:', msg.id);
-        // Create a new player for this peer
-        const foreignPlayer = getOrCreatePlayer(msg.id, msg.x, msg.y);
-        
-        sono.broadcast({
-            type: 'join',
-            id: myid,
-            x: player.x,
-            y: player.y
-        }, 'join');
-        // Store the player with their peer ID
-        // playerMap.set(msg.id, foreignPlayer);
-        // otherPlayers.push(foreignPlayer);
-        
-        // No need to send direct messages back - the broadcast already handled this
-    });
-    
-    // When a peer disconnects
-    sono.on('close', (msg) => {
-        console.log('Peer disconnected:', msg.id);
-        
-        // Remove the player from our map and array
-        const playerToRemove = playerMap.get(msg.id);
-        if (playerToRemove) {
-            const index = otherPlayers.indexOf(playerToRemove);
-            if (index !== -1) {
-                otherPlayers.splice(index, 1);
-            }
-            playerMap.delete(msg.id);
-        }
-    });
-
-    sono.on('position', (msg) => {
-        // Update the position of the player who sent this message
-        if (msg.id && msg.x !== undefined && msg.y !== undefined) {
-            const playerToUpdate = playerMap.get(msg.id);
-            if (playerToUpdate) {
-                playerToUpdate.x = msg.x;
-                playerToUpdate.y = msg.y;
-            }
-        }
-    });
+// Generate unique IDs for projectiles
+let projectileCounter = 0;
+function generateProjectileId() {
+    return `${myid}-proj-${projectileCounter++}`;
 }
 
 function handleRTCMessages(message) {
@@ -538,9 +596,64 @@ function handleRTCMessages(message) {
         let edit_player = playerMap.get(senderid);
         edit_player.x = Number(packetdata.x)
         edit_player.y = Number(packetdata.y)
+        edit_player.radius = Number(packetdata.radius)
         playerMap.set(senderid, edit_player)
 
         console.print
+        return;
+    }
+
+    // New projectile message
+    if (eventname == "newproj" && current_player_list.includes(senderid)) {
+        console.log("New projectile received:", packetdata);
+        
+        // Create new projectile with the received data
+        const projectile = new Projectile(
+            Number(packetdata.x),
+            Number(packetdata.y),
+            5, // radius
+            'red', // color for other players' projectiles
+            {
+                x: Number(packetdata.vx),
+                y: Number(packetdata.vy)
+            }
+        );
+        
+        // Add to projectile map with the received ID
+        projectileMap.set(packetdata.id, projectile);
+        return;
+    }
+    
+    // Projectile position update
+    if (eventname == "projpos" && current_player_list.includes(senderid)) {
+        const projectile = projectileMap.get(packetdata.id);
+        if (projectile) {
+            projectile.x = Number(packetdata.x);
+            projectile.y = Number(packetdata.y);
+        }
+        return;
+    }
+    
+    // Projectile deletion
+    if (eventname == "projdel" && current_player_list.includes(senderid)) {
+        projectileMap.delete(packetdata.id);
+        return;
+    }
+
+    // Hit notification
+    if (eventname == "hit" && senderid === myid) {
+        console.log("You were hit by player", packetdata.by);
+        
+        // Implement hit effects - reduce player size, health, etc.
+        player.radius = Math.max(10, player.radius - 5); // Don't go below 10
+        
+        // Check if player is now "dead"
+        if (player.radius <= 10) {
+            cancelAnimationFrame(animationId);
+            rtc.sendMessage("left|" + myid + "|{}");
+            console.log("Game over - killed by player", packetdata.by);
+            // Show game over screen
+        }
         return;
     }
 }
