@@ -29,9 +29,13 @@ function updateList() {
   );
 }
 
-function makeLobbyShowcase(name, id) {
+function makeLobbyShowcase(name, id, players, max_players, disabled=false) {
   // Returns an html element representing the given lobby
-  return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | ${id}</p></div><div><button class="joinbutton" onclick="joinLobby('${id}')">JOIN</button> </div></div>`
+  if (disabled) {
+    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | ${id} (${players}/${max_players}) </p></div><div><button class="joinbutton" disabled>JOIN</button> </div></div>`
+  } else {
+    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | ${id} (${players}/${max_players}) </p></div><div><button class="joinbutton" onclick="joinLobby('${id}')">JOIN</button> </div></div>`
+  }
 }
 
 function updateSuccess(lobbies) {
@@ -45,7 +49,7 @@ function updateSuccess(lobbies) {
   // Generate server buttons
   let lobbyelements = ""
   for (var i = 0; i < lobbies.length; i++) { 
-    lobbyelements += makeLobbyShowcase(lobbies[i].name, lobbies[i].id) ; 
+    lobbyelements += makeLobbyShowcase(lobbies[i].name, lobbies[i].id, lobbies[i].players, lobbies[i].max_players, (lobbies[i].players == lobbies[i].max_players)) ; 
   }
 
   let footer = `<div class="lobbyitem lobbylistfooter"><div><button class="createbutton" onclick="createLobby()">CREATE LOBBY</button></div></div>`

@@ -9,16 +9,20 @@ const sono = new Sono();
 const PORT = Deno.args[1]; // Default HTTP port
 const WEBSOCKETPORT = Deno.args[2]; // Chose it cause it is cool B)
 const HOSTNAME = Deno.args[0]; // <-- CHANGE HERE AND IN lobbylist.js TO YOUR LOCAL IP TO AVOID SOP!
+const MAX_LOBBIES = 10;
+const MAX_MAX_PLAYERS = 12;
 
 class Lobby {
   id = "";
   name = "Unamed Lobby";
   max_players = 4;
   players = 0;
+  netcodetype = "NONE";
 };
 
 let lobby_list : Array<Lobby> = []; // Holds all current lobbies
 let id_list : Array<string> = []; // Holds all current lobby IDs to assure none are reused
+let connected_players = null;
 
 function generateLobbyID(length : number): string {
   // Generates a random hexidecimal code of length provided
@@ -45,6 +49,27 @@ function generateUniqueLobbyID(length : number): string {
   return new_id;
 }
 
+function playerPolling(timetowait: number) {
+  
+  let players_inside = 0;
+
+  lobby_list.forEach( function(lobby) {
+    players_inside = Object.keys(sono.channelsList[lobby.id]).length;
+    if (players_inside == 0) {
+      lobby.players = 0;
+    } else {
+      lobby.players = players_inside;
+    }
+  } )
+
+  globalThis.setTimeout(function() {playerPolling(timetowait)}, timetowait);
+  console.log("Updated playercounts");
+  
+}
+// Poll for players every 1 second
+playerPolling(1000);
+
+
 Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
 
   const url = new URL(req.url);
@@ -68,6 +93,10 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
 
   // Add a new server to the server list with the desired name, respond with the lobby object created
   else if (req.method === "POST" && url.pathname === "/lobbies/new") {
+
+    // Only make another lobby if we can
+    if (lobby_list.length < MAX_LOBBIES) {
+
     const  new_lobby = new Lobby();
     new_lobby.name = body.substring(0, 32); // Cap server names at 32 characters
     if (new_lobby.name == "") {new_lobby.name = "Lobby";}
@@ -81,6 +110,10 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
     lobby_list.push(new_lobby);
 
     return new Response(JSON.stringify(new_lobby), { status: 200 });
+
+  } else {
+    return new Response("Full lobby list - Cannot create new lobby", { status: 409 });
+  }
   }
 
   // Send them to the game!
@@ -141,6 +174,13 @@ Deno.serve({ port: WEBSOCKETPORT, hostname: HOSTNAME }, async (req : Request) =>
   // Connect to server (WebSocket/RTC)
   else if (req.method === "GET" && split_path.length == 3 && split_path[1] === "join") {
     if (id_list.includes(split_path[2])) {
+
+      // If lobby is full, refuse connection
+      let players_inside = Object.keys(sono.channelsList[split_path[2]]).length;
+      if (players_inside >= MAX_MAX_PLAYERS) {
+        return new Response("Lobby Full! (Exceeded internal maximum)", { status: 409 });
+      }
+
       // Lobby exists, connect user
       return sono.connect(req, () => {
         console.log("New client connected to lobby " + split_path[2]);

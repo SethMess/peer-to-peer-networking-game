@@ -46,6 +46,11 @@ h1 {
     border-left: 2px solid darkolivegreen;
 }
 
+.joinbutton:disabled{
+    background-color: #000000;
+    border-left: 2px solid #222222;
+}
+
 .createbutton {
     border: none;
     color: white;
