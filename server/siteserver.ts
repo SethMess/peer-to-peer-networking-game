@@ -10,7 +10,7 @@ const PORT = Deno.args[1]; // Default HTTP port
 const WEBSOCKETPORT = Deno.args[2]; // Chose it cause it is cool B)
 const HOSTNAME = Deno.args[0]; // <-- CHANGE HERE AND IN lobbylist.js TO YOUR LOCAL IP TO AVOID SOP!
 const MAX_LOBBIES = 10;
-const MAX_MAX_PLAYERS = 12;
+const MAX_MAX_PLAYERS = 12; // The maximum amount of players allowed in one lobby
 
 class Lobby {
   id = "";
@@ -23,6 +23,23 @@ class Lobby {
 let lobby_list : Array<Lobby> = []; // Holds all current lobbies
 let id_list : Array<string> = []; // Holds all current lobby IDs to assure none are reused
 let connected_players = null;
+
+function isLobbyFilled(id: string): boolean {
+  // Returns wether the given lobby is full or not, non-existant lobbies are counted as full
+
+  for (var i = 0; i < lobby_list.length; i++) { 
+    if (lobby_list[i].id == id) {
+      let players_inside = Object.keys(sono.channelsList[id]).length;
+      if (players_inside < lobby_list[i].max_players) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+  }
+
+  return true;
+}
 
 function generateLobbyID(length : number): string {
   // Generates a random hexidecimal code of length provided
@@ -66,7 +83,7 @@ function playerPolling(timetowait: number) {
   console.log("Updated playercounts");
   
 }
-// Poll for players every 1 second
+// Poll for players every second
 playerPolling(1000);
 
 
@@ -118,13 +135,16 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
 
   // Send them to the game!
   else if (req.method === "GET" && split_path[1] === "play") {
-    console.log("SERVING GAMER")
+
     // const file = await Deno.open("./static/game.html", { read: true, write: false });
     // return new Response(file.readable);
-    console.log("SERVING GAMER PATH: " + url.pathname)
     
     // If requesting the main HTML page (just /play or /play/{lobby_id})
     if (split_path.length <= 3 && !url.pathname.includes('.')) {
+      console.log(isLobbyFilled(split_path[2]))
+      if (isLobbyFilled(split_path[2])) {
+        return new Response("Lobby is full!", { status: 409 });
+      }
       return serveFile(req, "../game/index.html");
       // return serveFile(req, "./static/game.html");  // TEMP path change!
     } 
@@ -177,8 +197,8 @@ Deno.serve({ port: WEBSOCKETPORT, hostname: HOSTNAME }, async (req : Request) =>
 
       // If lobby is full, refuse connection
       let players_inside = Object.keys(sono.channelsList[split_path[2]]).length;
-      if (players_inside >= MAX_MAX_PLAYERS) {
-        return new Response("Lobby Full! (Exceeded internal maximum)", { status: 409 });
+      if (isLobbyFilled(split_path[2])) {
+        return new Response("Lobby Full!", { status: 409 });
       }
 
       // Lobby exists, connect user

@@ -42,27 +42,30 @@ function updateSuccess(lobbies) {
   // Continue the server update if it worked
 
   // Update number of servers
-  let lobbylistelm = document.getElementsByClassName("lobbylist")[0]
+  let lobbylistheader = document.getElementsByClassName("lobbylistheader")[0]
+  let lobbylistelm = document.getElementsByClassName("lobbylistcontent")[0]
+  let createlobbyelm = document.getElementsByClassName("createbutton")[0]
 
-  let header = `<div class="lobbyitem lobbylistheader"><div class="lobbylistheader">NUMBER OF LOBBIES AVAILABLE: ${lobbies.length}</div></div>`
+  lobbylistheader.innerHTML = `NUMBER OF LOBBIES AVAILABLE: ${lobbies.length}`
 
   // Generate server buttons
   let lobbyelements = ""
   for (var i = 0; i < lobbies.length; i++) { 
-    lobbyelements += makeLobbyShowcase(lobbies[i].name, lobbies[i].id, lobbies[i].players, lobbies[i].max_players, (lobbies[i].players == lobbies[i].max_players)) ; 
+    lobbyelements += makeLobbyShowcase(lobbies[i].name, lobbies[i].id, lobbies[i].players, lobbies[i].max_players, (lobbies[i].players >= lobbies[i].max_players)) ; 
   }
 
-  let footer = `<div class="lobbyitem lobbylistfooter"><div><button class="createbutton" onclick="createLobby()">CREATE LOBBY</button></div></div>`
+  lobbylistelm.innerHTML = lobbyelements
 
-  lobbylistelm.innerHTML = header + lobbyelements + footer
+  // Enable lobby creation
+  createlobbyelm.disabled = false;
 }
 
 function updateFailed() {
   // Lets the user know the server fetch failed
   let lobbylistelm = document.getElementsByClassName("lobbylist")[0]
-  let header = `<div class="lobbyitem lobbylistheader"><div class="lobbylistheader">ERROR FETCHING LOBBIES!</div></div>`
-  let footer = `<div class="lobbyitem lobbylistfooter"><div><button class="createbutton" onclick="createLobby()">CREATE LOBBY</button></div></div>`
-  lobbylistelm.innerHTML = header + footer;
+  lobbylistheader.innerHTML = `ERROR FETCHING LOBBIES!`
+  lobbylistelm.innerHTML = "";
+  createlobbyelm.disabled = true;
 }
 
 function createLobby() {
@@ -77,6 +80,9 @@ function joinLobby(id) {
 }
 
 function main() {
+
+  // Disable make lobby button before we start
+  document.getElementsByClassName("createbutton")[0].disabled = true;
   // Update the lobbies
   updateList();
 }

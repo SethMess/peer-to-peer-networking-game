@@ -67,6 +67,14 @@ h1 {
     width: 100%;
 }
 
+.createbutton:disabled {
+    background-color: #000000;
+}
+
+button:disabled{
+    cursor: not-allowed;
+}
+
 .lobbylist {
     margin: auto;
     border: 2px solid grey;
