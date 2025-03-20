@@ -620,11 +620,13 @@ function gameCode() {
     //handleMessages();
     rtc.callback = (message) => handleRTCMessages(message);
     
-    // Start the game loop
+    // Start the game loop and tell other players to send their info to get us started
+    rtc.sendMessage("forceupdate|" + myid + "|{}");
+    sendCords()
     animate();
 }
 
-function sendCords() { // TEMP DISABLED
+function sendCords() {
     // Send player position
     rtc.sendMessage("pos|" + myid + "|" + JSON.stringify({
         x: player.x, 
@@ -799,6 +801,12 @@ function handleRTCMessages(message) {
             'rgba(255, 0, 0, 0.7)'
         );
         lasers.push(laser);
+        return;
+    }
+
+    // Called to sync on player join
+    if (eventname == "forceupdate") {
+        sendCords()
         return;
     }
 }
