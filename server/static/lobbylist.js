@@ -2,6 +2,10 @@ const SERVER_LOCATION = "localhost" // <-- CHANGE HERE AND IN siteserver.ts TO Y
 const SERVER_PORT = 8100 // Shouldn't even need this anymore but whatever
 const SERVER_URL = SERVER_LOCATION + ":" + SERVER_PORT
 
+const NETCODE_TYPES = ["DELAY-2", "DELAY-4", "ROLLBACK"];
+
+let netcode_type = 0;
+
 window.onload = function () {
   main()
 };
@@ -29,12 +33,12 @@ function updateList() {
   );
 }
 
-function makeLobbyShowcase(name, id, players, max_players, disabled=false) {
+function makeLobbyShowcase(name, id, players, max_players, netcode_type, disabled=false) {
   // Returns an html element representing the given lobby
   if (disabled) {
-    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | ${id} (${players}/${max_players}) </p></div><div><button class="joinbutton" disabled>JOIN</button> </div></div>`
+    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${netcode_type} NETCODE </p></div><div><button class="joinbutton" disabled>JOIN</button> </div></div>`
   } else {
-    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | ${id} (${players}/${max_players}) </p></div><div><button class="joinbutton" onclick="joinLobby('${id}')">JOIN</button> </div></div>`
+    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${netcode_type} NETCODE </p></div><div><button class="joinbutton" onclick="joinLobby('${id}')">JOIN</button> </div></div>`
   }
 }
 
@@ -51,7 +55,7 @@ function updateSuccess(lobbies) {
   // Generate server buttons
   let lobbyelements = ""
   for (var i = 0; i < lobbies.length; i++) { 
-    lobbyelements += makeLobbyShowcase(lobbies[i].name, lobbies[i].id, lobbies[i].players, lobbies[i].max_players, (lobbies[i].players >= lobbies[i].max_players)) ; 
+    lobbyelements += makeLobbyShowcase(lobbies[i].name, lobbies[i].id, lobbies[i].players, lobbies[i].max_players, lobbies[i].netcodetype, (lobbies[i].players >= lobbies[i].max_players)) ; 
   }
 
   lobbylistelm.innerHTML = lobbyelements
@@ -70,13 +74,35 @@ function updateFailed() {
 
 function createLobby() {
   // Tries to create a lobby
-  fetch("http://" + SERVER_URL + "/lobbies/new", {method: "POST"});
+  let lobbyname = document.getElementById("lobbynameinput").value;
+  let lobbysize = document.getElementById("lobbysizeinput").value;
+
+  if (!document.getElementById("lobbynameinput").checkValidity()) {
+    alert("Invalid lobby name. Must be within 1-32 characters.")
+    return;
+  }
+  if (!document.getElementById("lobbysizeinput").checkValidity()) {
+    alert("Max player coiunt must be within 2-8 characters.")
+    return;
+  }
+
+  fetch("http://" + SERVER_URL + "/lobbies/new", {method: "POST", body: JSON.stringify({ name: lobbyname, max_players: lobbysize, netcodetype: NETCODE_TYPES[netcode_type] })});
   updateList();
 }
 
 function joinLobby(id) {
   // Send user to join the given lobby
   window.location.href = "http://" + SERVER_URL + "/play/" + id;
+}
+
+function switchNetcode() {
+  // Cycle the netcode by one
+  netcode_type += 1;
+  if (netcode_type >= NETCODE_TYPES.length) {
+    netcode_type = 0;
+  }
+
+  document.getElementsByClassName("netcodebutton")[0].innerHTML = NETCODE_TYPES[netcode_type];
 }
 
 function main() {

@@ -80,8 +80,6 @@ function playerPolling(timetowait: number) {
   } )
 
   globalThis.setTimeout(function() {playerPolling(timetowait)}, timetowait);
-  console.log("Updated playercounts");
-  
 }
 // Poll for players every second
 playerPolling(1000);
@@ -115,8 +113,13 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
     if (lobby_list.length < MAX_LOBBIES) {
 
     const  new_lobby = new Lobby();
-    new_lobby.name = body.substring(0, 32); // Cap server names at 32 characters
-    if (new_lobby.name == "") {new_lobby.name = "Lobby";}
+    let lobby_info = JSON.parse(body);
+    new_lobby.name = lobby_info.name.substring(0, 32); // Cap server names at 32 characters
+    if (new_lobby.name == "") {new_lobby.name = "New Lobby";}
+    new_lobby.max_players = Number(lobby_info.max_players); // Max player count
+    if (new_lobby.max_players < 2) {new_lobby.max_players = 2;}
+    if (new_lobby.max_players > 8) {new_lobby.max_players = 8;}
+    new_lobby.netcodetype = lobby_info.netcodetype.substring(0, 32); // Netcode type
 
     new_lobby.id = generateUniqueLobbyID(6); // Generate and log lobby id, create channel of that name
     id_list.push(new_lobby.id);

@@ -60,6 +60,7 @@ h1 {
     display: inline-block;
     margin: 0px;
     cursor: pointer;
+    border-left: 2px solid green;
     background-color: rgb(106, 170, 11);
     font-family: "Bebas Neue", sans-serif;
     font-weight: 800;
@@ -69,6 +70,23 @@ h1 {
 
 .createbutton:disabled {
     background-color: #000000;
+}
+
+.netcodebutton {
+    border: none;
+    color: white;
+    padding: 0px 2.0em;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0px;
+    cursor: pointer;
+    border-left: 2px solid blue;
+    background-color: rgb(11, 67, 170);
+    font-family: "Bebas Neue", sans-serif;
+    font-weight: 800;
+    font-size: 1.0em;
+    width: 100%;
 }
 
 button:disabled{
@@ -110,4 +128,19 @@ button:disabled{
     background-color: whitesmoke;
     border-radius: 0px 0px 5px 5px;
     margin: 5px;
+}
+
+input{
+    font-family: "Bebas Neue", sans-serif;
+    font-weight: 400;
+    font-size: 1.0em;
+    border: 0.0px solid gray;
+  }
+
+input:invalid{
+    background-color: lightcoral;
+}
+  
+input:valid{
+    background-color: whitesmoke;
 }
