@@ -19,7 +19,8 @@ import {
   waitForConnection,
   waitForRTCConnection,
   handlePeerListChanges,
-  handleRTCMessages,
+  handleRTCMessagesDelay,
+  handleRTCMessagesRollback,
   sendCords as networkSendCords
 } from './network.js';
 import {
@@ -117,7 +118,7 @@ function animate() {
     projectileMap,
     enemies,
     myid,
-    (msg) => rtc.sendMessage(msg),
+    (msg) => broadcastRTC(msg),
     scoreEl,
     animationId,
     cancelAnimationFrame
@@ -147,25 +148,49 @@ function sendCords() {
   );
 }
 
+function broadcastRTC(packet_type, packet_body) {
+  // This will make it easier to standardize how packets are sent
+  rtc.sendMessage(`${packet_type}|${myid}|${Date.now()}|${packet_body}`);
+}
+
 function establishRTCConnection(lobbyid) {
   console.log("SONO CONNECTED!");
 
   rtc = new SonoRTC(serverConfig, sono, {});
   sono.changeChannel(lobbyid);
   rtc.changeChannel(lobbyid);
-  rtc.callback = (message) => handleRTCMessages(
-    message,
-    current_player_list,
-    playerMap,
-    projectileMap,
-    player,
-    myid,
-    rtc,
-    lasers,
-    animationId,
-    cancelAnimationFrame,
-    sendCords
-  );
+  
+  // Use different handleRTCMessages function depending on netcode type
+  if (netcode_type < 2) { // Delay Based Netcode
+    rtc.callback = (message) => handleRTCMessagesDelay(
+      message,
+      current_player_list,
+      playerMap,
+      projectileMap,
+      player,
+      myid,
+      rtc,
+      lasers,
+      animationId,
+      cancelAnimationFrame,
+      sendCords,
+      (netcode_type * 2) + 2 // 2 frames for DELAY-2 (0), 4 frames for DELAY-4 (1)
+    );
+  } else { // Rollback Based netcode
+    rtc.callback = (message) => handleRTCMessagesRollback(
+      message,
+      current_player_list,
+      playerMap,
+      projectileMap,
+      player,
+      myid,
+      rtc,
+      lasers,
+      animationId,
+      cancelAnimationFrame,
+      sendCords
+    );
+  }
 
   waitForRTCConnection(rtc, gameCode);
 }
@@ -182,21 +207,7 @@ function gameCode() {
     }
   });
   
-  rtc.callback = (message) => handleRTCMessages(
-    message,
-    current_player_list,
-    playerMap,
-    projectileMap,
-    player,
-    myid,
-    rtc,
-    lasers,
-    animationId,
-    cancelAnimationFrame,
-    sendCords
-  );
-  
-  rtc.sendMessage("forceupdate|" + myid + "|{}");
+  broadcastRTC("forceupdate", "{}");
   sendCords();
   animate();
 }
@@ -227,7 +238,7 @@ addEventListener('click', (event) => {
     projectiles.push(projectile);
     projectileMap.set(projectileId, projectile);
     
-    rtc.sendMessage("newproj|" + myid + "|" + JSON.stringify({
+    broadcastRTC("newproj", JSON.stringify({
       id: projectileId,
       x: projectile.x, 
       y: projectile.y,
@@ -253,7 +264,7 @@ addEventListener('click', (event) => {
     const laser = new Laser(player.x, player.y, targetX, targetY, 'rgba(255, 0, 0, 0.7)');
     lasers.push(laser);
     
-    rtc.sendMessage("laser|" + myid + "|" + JSON.stringify({
+    broadcastRTC("laser", JSON.stringify({
       startX: player.x,
       startY: player.y,
       endX: targetX,
@@ -267,7 +278,7 @@ addEventListener('click', (event) => {
       maxDistance, 
       playerMap, 
       myid, 
-      (msg) => rtc.sendMessage(msg)
+      (msg) => broadcastRTC(msg)
     );
   }
 });

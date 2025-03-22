@@ -174,7 +174,7 @@ function performHitscanDetection(
   if (closestHit) {
     console.log("Hit player with laser:", closestHit);
     
-    rtcSendMessage("hit|" + closestHit + "|" + JSON.stringify({
+    rtcSendMessage("hit". JSON.stringify({
       by: myid,
       weapon: WEAPON_TYPES.HITSCAN,
       damage: 10
@@ -205,7 +205,7 @@ function collisionDetection(
       projectileMap.delete(projId);
       player.radius = Math.max(10, player.radius - 5);
       
-      rtcSendMessage("hit|" + myid + "|" + JSON.stringify({
+      rtcSendMessage("hit", JSON.stringify({
         by: projectileOwner,
         projId: projId
       }));
@@ -213,7 +213,7 @@ function collisionDetection(
       if (player.radius <= 10) {
         // This is where game over is detected, Do anything for the end of the game here or make a seprate function that is called here
         cancelAnimationFrame(animationId);
-        rtcSendMessage("left|" + myid + "|{}");
+        rtcSendMessage("left", "{}");
         console.log("Game over - killed by player", projectileOwner);
       }
     }
