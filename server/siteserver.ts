@@ -10,7 +10,6 @@ const PORT = Deno.args[1]; // Default HTTP port
 const WEBSOCKETPORT = Deno.args[2]; // Chose it cause it is cool B)
 const HOSTNAME = Deno.args[0]; // <-- CHANGE HERE AND IN lobbylist.js TO YOUR LOCAL IP TO AVOID SOP!
 const MAX_LOBBIES = 10;
-const MAX_MAX_PLAYERS = 12; // The maximum amount of players allowed in one lobby
 
 class Lobby {
   id = "";

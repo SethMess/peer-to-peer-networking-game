@@ -12,6 +12,7 @@ import {
 } from './classes.js';
 import {
   WS_URL,
+  NETCODE_TYPES,
   serverConfig,
   getOrCreatePlayer,
   removePlayer,
@@ -41,6 +42,7 @@ const player_poll_frames = 120;
 let poll_counter = 0;
 let sono = null;
 let rtc = null;
+let netcode_type = null; // Holds the nype of netcode being used
 let current_player_list = [];
 let myid = null;
 let animationId;
@@ -201,9 +203,14 @@ function gameCode() {
 
 function main() {
   let spliturl = window.location.href.split("/");
-  let lobbyid = spliturl[spliturl.length - 1];
+  let lobbyinfo = spliturl[spliturl.length - 1];
+  lobbyinfo = lobbyinfo.split("?")
+  let lobbyid = lobbyinfo[0];
+  netcode_type = Number(lobbyinfo[1]);
   let lobbynameelm = document.getElementsByClassName("lobbyname")[0];
+  let netcodetypeelm = document.getElementsByClassName("netcodetype")[0];
   lobbynameelm.innerHTML = "LOBBY ID: " + lobbyid;
+  netcodetypeelm.innerHTML = "NETCODE TYPE: " + NETCODE_TYPES[netcode_type];
 
   sono = new SonoClient(WS_URL + '/join/' + lobbyid);
   waitForConnection(sono, lobbyid, establishRTCConnection);

@@ -14,6 +14,7 @@ const serverConfig = {
 };
 
 const WS_URL = "ws://localhost:3001"; // <- UPDATE TO CORRECT URL!!!
+const NETCODE_TYPES = ["DELAY-2", "DELAY-4", "ROLLBACK"];
 
 function getOrCreatePlayer(playerMap, playerId, initialX, initialY) {
   if (playerId === undefined) {
@@ -243,7 +244,8 @@ function sendCords(
 
 export { 
   serverConfig, 
-  WS_URL, 
+  WS_URL,
+  NETCODE_TYPES,
   getOrCreatePlayer, 
   removePlayer, 
   waitForConnection, 

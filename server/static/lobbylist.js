@@ -92,7 +92,7 @@ function createLobby() {
 
 function joinLobby(id) {
   // Send user to join the given lobby
-  window.location.href = "http://" + SERVER_URL + "/play/" + id;
+  window.location.href = "http://" + SERVER_URL + "/play/" + id + "?" + netcode_type;
 }
 
 function switchNetcode() {
