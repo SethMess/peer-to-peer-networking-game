@@ -194,7 +194,6 @@ export class SonoRTC {
         // NOTHING FOR YOURSEWL
       } else {
         this.dataStreams[client].send(message);
-        console.log("Sending message to " + client);
       }
     })
   }

@@ -2,7 +2,7 @@ const SERVER_LOCATION = "localhost" // <-- CHANGE HERE AND IN siteserver.ts TO Y
 const SERVER_PORT = 8100 // Shouldn't even need this anymore but whatever
 const SERVER_URL = SERVER_LOCATION + ":" + SERVER_PORT
 
-const NETCODE_TYPES = ["DELAY-2", "DELAY-4", "ROLLBACK"];
+const NETCODE_TYPES = ["DELAY-AVG", "DELAY-MAX", "ROLLBACK"];
 
 let netcode_type = 0;
 

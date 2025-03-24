@@ -14,7 +14,7 @@ const serverConfig = {
 };
 
 const WS_URL = "ws://localhost:3001"; // <- UPDATE TO CORRECT URL!!!
-const NETCODE_TYPES = ["DELAY-2", "DELAY-4", "ROLLBACK"];
+const NETCODE_TYPES = ["DELAY-AVG", "DELAY-MAX", "ROLLBACK"];
 
 function getOrCreatePlayer(playerMap, playerId, initialX, initialY) {
   if (playerId === undefined) {
@@ -108,13 +108,18 @@ function handleRTCMessagesDelay(
   animationId,
   cancelAnimationFrame,
   sendCords,
-  delayFrames
+  delayFrames,
+  delaySampleList
 ) {
-  console.log("RTC: " + message.data);
   let split_message = message.data.split("|");
   let eventname = split_message[0];
   let senderid = split_message[1];
-  let timestamp = split_message[2];
+  let timestamp = Number(split_message[2]);
+
+  // Add delay info to sample list
+  delaySampleList.shift();
+  delaySampleList.push(Date.now() - timestamp);
+
   let packetdata = JSON.parse(split_message[3]);
 
   // Left game messages

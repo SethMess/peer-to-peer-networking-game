@@ -45,6 +45,12 @@ let sono = null;
 let rtc = null;
 let netcode_type = null; // Holds the nype of netcode being used
 let current_player_list = [];
+
+const DELAY_SAMPLES = 10 // The number of samples used to determine how delayed this peer's connection is
+let delay_list = Array(DELAY_SAMPLES); // Delay samples going back DELAY_SAMPLES samples
+delay_list.fill(0);
+let delay = 0; // The calculated delay used by delay-based netcode
+
 let myid = null;
 let animationId;
 let score = 0;
@@ -74,6 +80,21 @@ const keys = {
 function animate() {
   animationId = requestAnimationFrame(animate);
   c.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Show frame delay
+  switch(netcode_type) {
+    case 0:
+      // Average Delay Based, delay = average of packet delays from peers
+      delay = delay_list.reduce((a, b) => a + b) / delay_list.length;
+      break;
+    case 1:
+      // Maximum Delay Based, delay = most delayed package from peers
+      delay = Math.max(...delay_list);
+      break;
+    default:
+      // Rollback/Default 
+  } 
+  document.getElementsByClassName("delaylist")[0].innerHTML = delay_list.toString() + "<br/>Functional Delay: " + delay;
 
   const peerChanges = handlePeerListChanges(
     rtc,
@@ -174,7 +195,8 @@ function establishRTCConnection(lobbyid) {
       animationId,
       cancelAnimationFrame,
       sendCords,
-      (netcode_type * 2) + 2 // 2 frames for DELAY-2 (0), 4 frames for DELAY-4 (1)
+      (netcode_type * 2) + 2, // 2 frames for DELAY-2 (0), 4 frames for DELAY-4 (1)
+      delay_list
     );
   } else { // Rollback Based netcode
     rtc.callback = (message) => handleRTCMessagesRollback(
