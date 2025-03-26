@@ -19,14 +19,29 @@ class Lobby {
   netcodetype = "NONE";
 };
 
-let lobby_list : Array<Lobby> = []; // Holds all current lobbies
-let id_list : Array<string> = []; // Holds all current lobby IDs to assure none are reused
+let lobby_list: Array<Lobby> = []; // Holds all current lobbies
+let id_list: Array<string> = []; // Holds all current lobby IDs to assure none are reused
 let connected_players = null;
+
+
+function addCorsHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set("Access-Control-Allow-Origin", "*");
+  headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  headers.set("Access-Control-Allow-Headers", "Content-Type");
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
 
 function isLobbyFilled(id: string): boolean {
   // Returns wether the given lobby is full or not, non-existant lobbies are counted as full
 
-  for (var i = 0; i < lobby_list.length; i++) { 
+  for (var i = 0; i < lobby_list.length; i++) {
     if (lobby_list[i].id == id) {
       let players_inside = Object.keys(sono.channelsList[id]).length;
       if (players_inside < lobby_list[i].max_players) {
@@ -40,7 +55,7 @@ function isLobbyFilled(id: string): boolean {
   return true;
 }
 
-function generateLobbyID(length : number): string {
+function generateLobbyID(length: number): string {
   // Generates a random hexidecimal code of length provided
   // all letters are lowercase, numbers are 0-9
 
@@ -53,7 +68,7 @@ function generateLobbyID(length : number): string {
   return new_id;
 }
 
-function generateUniqueLobbyID(length : number): string {
+function generateUniqueLobbyID(length: number): string {
   // Generates a lobby id of given length that is not in use
 
   let new_id = "";
@@ -66,25 +81,25 @@ function generateUniqueLobbyID(length : number): string {
 }
 
 function playerPolling(timetowait: number) {
-  
+
   let players_inside = 0;
 
-  lobby_list.forEach( function(lobby) {
+  lobby_list.forEach(function (lobby) {
     players_inside = Object.keys(sono.channelsList[lobby.id]).length;
     if (players_inside == 0) {
       lobby.players = 0;
     } else {
       lobby.players = players_inside;
     }
-  } )
+  })
 
-  globalThis.setTimeout(function() {playerPolling(timetowait)}, timetowait);
+  globalThis.setTimeout(function () { playerPolling(timetowait) }, timetowait);
 }
 // Poll for players every second
 playerPolling(1000);
 
 
-Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
+Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req: Request) => {
 
   const url = new URL(req.url);
   const split_path = url.pathname.split("/");
@@ -102,7 +117,7 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
 
   // Get server list
   else if (req.method === "GET" && url.pathname === "/lobbies") {
-    return new Response(JSON.stringify(lobby_list), { status: 200 });
+    return addCorsHeaders(new Response(JSON.stringify(lobby_list), { status: 200 }));
   }
 
   // Add a new server to the server list with the desired name, respond with the lobby object created
@@ -111,28 +126,28 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
     // Only make another lobby if we can
     if (lobby_list.length < MAX_LOBBIES) {
 
-    const  new_lobby = new Lobby();
-    let lobby_info = JSON.parse(body);
-    new_lobby.name = lobby_info.name.substring(0, 32); // Cap server names at 32 characters
-    if (new_lobby.name == "") {new_lobby.name = "New Lobby";}
-    new_lobby.max_players = Number(lobby_info.max_players); // Max player count
-    if (new_lobby.max_players < 2) {new_lobby.max_players = 2;}
-    if (new_lobby.max_players > 8) {new_lobby.max_players = 8;}
-    new_lobby.netcodetype = lobby_info.netcodetype.substring(0, 32); // Netcode type
+      const new_lobby = new Lobby();
+      let lobby_info = JSON.parse(body);
+      new_lobby.name = lobby_info.name.substring(0, 32); // Cap server names at 32 characters
+      if (new_lobby.name == "") { new_lobby.name = "New Lobby"; }
+      new_lobby.max_players = Number(lobby_info.max_players); // Max player count
+      if (new_lobby.max_players < 2) { new_lobby.max_players = 2; }
+      if (new_lobby.max_players > 8) { new_lobby.max_players = 8; }
+      new_lobby.netcodetype = lobby_info.netcodetype.substring(0, 32); // Netcode type
 
-    new_lobby.id = generateUniqueLobbyID(6); // Generate and log lobby id, create channel of that name
-    id_list.push(new_lobby.id);
-    sono.channel(new_lobby.id, () => {
-      console.log('new lobby channel created: ' + new_lobby.id);
-    })
+      new_lobby.id = generateUniqueLobbyID(6); // Generate and log lobby id, create channel of that name
+      id_list.push(new_lobby.id);
+      sono.channel(new_lobby.id, () => {
+        console.log('new lobby channel created: ' + new_lobby.id);
+      })
 
-    lobby_list.push(new_lobby);
+      lobby_list.push(new_lobby);
 
-    return new Response(JSON.stringify(new_lobby), { status: 200 });
+      return addCorsHeaders(new Response(JSON.stringify(new_lobby), { status: 200 }));
 
-  } else {
-    return new Response("Full lobby list - Cannot create new lobby", { status: 409 });
-  }
+    } else {
+      return addCorsHeaders(new Response("Full lobby list - Cannot create new lobby", { status: 409 }));
+    }
   }
 
   // Send them to the game!
@@ -140,7 +155,7 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
 
     // const file = await Deno.open("./static/game.html", { read: true, write: false });
     // return new Response(file.readable);
-    
+
     // If requesting the main HTML page (just /play or /play/{lobby_id})
     if (split_path.length <= 3 && !url.pathname.includes('.')) {
       console.log(isLobbyFilled(split_path[2]))
@@ -149,7 +164,7 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
       }
       return serveFile(req, "../game/index.html");
       // return serveFile(req, "./static/game.html");  // TEMP path change!
-    } 
+    }
     // If requesting JavaScript file
     else if (url.pathname.endsWith('.js')) { // TEMP false!
       return new Response(await Deno.readFile("../game" + url.pathname.substring(5)), {
@@ -166,7 +181,7 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
         return serveFile(req, filePath);
       } catch (err) {
         console.error("Error serving file:", err);
-        return new Response("File not found", { status: 404 });
+        return addCorsHeaders(new Response("File not found", { status: 404 }));
       }
     }
   }
@@ -183,7 +198,7 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req : Request) => {
 });
 
 // WEBSOCKET PORT
-Deno.serve({ port: WEBSOCKETPORT, hostname: HOSTNAME }, async (req : Request) => {
+Deno.serve({ port: WEBSOCKETPORT, hostname: HOSTNAME }, async (req: Request) => {
 
   const url = new URL(req.url);
   const split_path = url.pathname.split("/");
@@ -215,6 +230,6 @@ Deno.serve({ port: WEBSOCKETPORT, hostname: HOSTNAME }, async (req : Request) =>
   }
 
   else { // If all else fails, 404!
-      return new Response("404 Not Found", { status: 404 });
+    return new Response("404 Not Found", { status: 404 });
   }
 });
