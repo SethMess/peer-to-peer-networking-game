@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  game-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8100:8100"
+      - "3001:3001"
+    restart: unless-stopped
+    # Optional environment variables if needed
+    environment:
+      - NODE_ENV=production
+    # Optional volume mapping if you need persistent data
+    # volumes:
+    # Maybe good for logging so we can view logs outside of the container
+    #   - ./logs:/app/logs
+    #   - ./data:/app/data
