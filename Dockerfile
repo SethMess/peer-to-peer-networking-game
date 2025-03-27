@@ -17,6 +17,4 @@ EXPOSE 3001
 # Change the working directory to server before running
 WORKDIR /app/server
 
-# Run the server from the server directory
-# Note: Using 0.0.0.0 instead of localhost to allow external connections
 CMD ["deno", "run", "--allow-net", "--allow-read", "siteserver.ts", "0.0.0.0", "8100", "3001"]

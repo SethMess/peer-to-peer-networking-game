@@ -13,7 +13,8 @@ const serverConfig = {
   ]
 };
 
-const WS_URL = "ws://localhost:3001"; // <- UPDATE TO CORRECT URL!!!
+// const WS_URL = "ws://localhost:3001"; // <- UPDATE TO CORRECT URL!!!
+const WS_URL = process.env.WS_URL || `ws://${window.location.hostname}:3001`;
 const NETCODE_TYPES = ["DELAY-AVG", "DELAY-MAX", "ROLLBACK"];
 
 function getOrCreatePlayer(playerMap, playerId, initialX, initialY) {

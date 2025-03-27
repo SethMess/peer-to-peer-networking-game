@@ -1,6 +1,8 @@
-const SERVER_LOCATION = "localhost" // <-- CHANGE HERE AND IN siteserver.ts TO YOUR LOCAL IP TO AVOID SOP!
+const SERVER_LOCATION = window.location.hostname // Use environment variable or current hostname
 const SERVER_PORT = 8100 // Shouldn't even need this anymore but whatever
 const SERVER_URL = SERVER_LOCATION + ":" + SERVER_PORT
+
+console.log(`Connecting to server at ${SERVER_URL}`);
 
 const NETCODE_TYPES = ["DELAY-AVG", "DELAY-MAX", "ROLLBACK"];
 
