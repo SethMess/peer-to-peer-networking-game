@@ -1,6 +1,7 @@
 import { SonoClient } from 'https://deno.land/x/sono@v1.2/src/sonoClient.js';
 import { Player, Projectile, Laser } from './classes.js';
 import { WEAPON_TYPES } from './utils.js';
+import { PriorityQueue } from './prioqueue.js';
 
 const serverConfig = {
   iceServers: [
@@ -15,6 +16,15 @@ const serverConfig = {
 
 const WS_URL = "ws://localhost:3001"; // <- UPDATE TO CORRECT URL!!!
 const NETCODE_TYPES = ["DELAY-AVG", "DELAY-MAX", "ROLLBACK"];
+
+class Packet {
+  constructor(id, type, timestamp, data) {
+    this.id = id;
+    this.type = type;
+    this.timestamp = timestamp;
+    this.data = data;
+  }
+}
 
 function getOrCreatePlayer(playerMap, playerId, initialX, initialY) {
   if (playerId === undefined) {
@@ -96,6 +106,29 @@ function handlePeerListChanges(
   };
 }
 
+
+// We need two functions for delay-based netcode.
+// One for getting packets, and nother for executing packets that we have based on delay
+function handleRTCMessagesDelayTEMP( 
+  message,
+  current_player_list,
+  playerMap,
+  projectileMap,
+  player,
+  myid,
+  rtc,
+  lasers,
+  animationId,
+  cancelAnimationFrame,
+  sendCords,
+  delayFrames,
+  delaySampleList,
+  packetList 
+) {
+  // Store current packet
+  packetList.add();
+}
+
 function handleRTCMessagesDelay(
   message,
   current_player_list,
@@ -109,7 +142,8 @@ function handleRTCMessagesDelay(
   cancelAnimationFrame,
   sendCords,
   delayFrames,
-  delaySampleList
+  delaySampleList,
+  packetList
 ) {
   let split_message = message.data.split("|");
   let eventname = split_message[0];
@@ -182,7 +216,7 @@ function handleRTCMessagesDelay(
     console.log("You were hit by player", packetdata.by);
 
     //THis message was added trying to debug the projectile not spawning on player side
-    rtcSendMessage("projdel|" + myid + "|" + JSON.stringify({
+    rtcSendMessage("projdel", JSON.stringify({
         id: projId
       }));
     const damage = packetdata.weapon === WEAPON_TYPES.HITSCAN ? 10 : 5;
@@ -190,7 +224,7 @@ function handleRTCMessagesDelay(
     
     if (player.radius <= 10) {
       cancelAnimationFrame(animationId);
-      rtc.sendMessage("left|" + myid + "|" + Date.now() + "|{}");
+      rtc.sendMessage("left", "{}");
       console.log("Game over - killed by player", packetdata.by);
     }
     return;
@@ -296,7 +330,7 @@ function handleRTCMessagesRollback(
     console.log("You were hit by player", packetdata.by);
 
     //THis message was added trying to debug the projectile not spawning on player side
-    rtcSendMessage("projdel|" + myid + "|" + JSON.stringify({
+    rtcSendMessage("projdel", JSON.stringify({
         id: projId
       }));
     const damage = packetdata.weapon === WEAPON_TYPES.HITSCAN ? 10 : 5;
@@ -304,7 +338,7 @@ function handleRTCMessagesRollback(
     
     if (player.radius <= 10) {
       cancelAnimationFrame(animationId);
-      rtc.sendMessage("left|" + myid + "|" + Date.now() + "|{}");
+      rtc.sendMessage("left", "{}");
       console.log("Game over - killed by player", packetdata.by);
     }
     return;
@@ -374,5 +408,6 @@ export {
   handlePeerListChanges, 
   handleRTCMessagesDelay, 
   handleRTCMessagesRollback, 
-  sendCords 
+  sendCords,
+  Packet
 };

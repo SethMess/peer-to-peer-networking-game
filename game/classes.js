@@ -5,6 +5,8 @@ class Player {
   constructor(x, y, radius, color) {
     this.x = x;
     this.y = y;
+    this.delay_x = x; // Only used by non-remote player
+    this.delay_y = y; // Only used by non-remote player
     this.radius = radius;
     this.color = color;
   }
@@ -17,15 +19,28 @@ class Player {
     c.fill();
     c.closePath();
   }
+
+  draw_at_delay(c) {
+    c.beginPath();
+    c.arc(this.delay_x, this.delay_y, this.radius, 0, 2 * Math.PI);
+    c.fillStyle = this.color;
+    c.stroke();
+    c.fill();
+    c.closePath();
+  }
 }
 
 class Projectile {
-  constructor(x, y, radius, color, velocity) {
+  constructor(x, y, radius, color, velocity, time_made = 0, delay = false) {
     this.x = x;
     this.y = y;
+    this.delay_x = x;
+    this.delay_y = y;
     this.radius = radius;
     this.color = color;
     this.velocity = velocity;
+    this.time_made = time_made; // Only needed for player bullets
+    this.delay = delay;
   }
 
   draw(c) {
@@ -38,9 +53,26 @@ class Projectile {
     c.closePath();
   }
 
+  draw_at_delay(c, time) {
+    if (time < this.time_made) { // If we shoudldn't exist yet, don't draw!
+      return;
+    }
+    c.beginPath();
+    c.arc(this.delay_x, this.delay_y, this.radius, 0, 2 * Math.PI);
+    c.strokeStyle = this.color;
+    c.fillStyle = this.color;
+    c.stroke();
+    c.fill();
+    c.closePath();
+  }
+
   update() {
     this.x = this.x + this.velocity.x;
     this.y = this.y + this.velocity.y;
+    if (!this.delay) {
+      this.delay_x = this.delay_x + this.velocity.x;
+      this.delay_y = this.delay_y + this.velocity.y;
+    }
   }
 }
 
@@ -174,7 +206,7 @@ function performHitscanDetection(
   if (closestHit) {
     console.log("Hit player with laser:", closestHit);
     
-    rtcSendMessage("hit". JSON.stringify({
+    rtcSendMessage("hit", JSON.stringify({
       by: myid,
       weapon: WEAPON_TYPES.HITSCAN,
       damage: 10
@@ -225,11 +257,76 @@ function collisionDetection(
       if (projOtherPlayerDist - otherPlayer.radius - projectile.radius < 1) {
         if (projectileOwner === myid) {
           projectileMap.delete(projId);
-          rtcSendMessage("projdel|" + myid + "|" + JSON.stringify({
+          rtcSendMessage("projdel", JSON.stringify({
             id: projId
           }));
           
-          rtcSendMessage("hit|" + otherPlayerId + "|" + JSON.stringify({
+          rtcSendMessage("hit", JSON.stringify({
+            by: myid,
+            projId: projId
+          }));
+        }
+        break;
+      }
+    }
+  }
+}
+
+// Use this one when using delay-based netcode
+function collisionDetectionDelay(
+  player,
+  playerMap,
+  projectileMap,
+  enemies,
+  myid,
+  rtcSendMessage,
+  scoreEl,
+  animationId,
+  cancelAnimationFrame
+) {
+  // Player-projectile collisions
+  for (const [projId, projectile] of projectileMap.entries()) {
+    const projectileOwner = projId.split('-')[0];
+    if (projectileOwner === myid) continue;
+
+    const projPlayerDist = Math.hypot(projectile.x - player.delay_x, projectile.y - player.delay_y);
+    if (projPlayerDist - player.radius - projectile.radius < 1) {
+      console.log("Hit by projectile from player:", projectileOwner);
+      
+      projectileMap.delete(projId);
+      player.radius = Math.max(10, player.radius - 5);
+      
+      rtcSendMessage("hit", JSON.stringify({
+        by: projectileOwner,
+        projId: projId
+      }));
+
+      rtcSendMessage("projdel", JSON.stringify({
+        id: projId
+      }));
+      
+      if (player.radius <= 10) {
+        // This is where game over is detected, Do anything for the end of the game here or make a seprate function that is called here
+        cancelAnimationFrame(animationId);
+        rtcSendMessage("left", "{}");
+        console.log("Game over - killed by player", projectileOwner);
+      }
+    }
+    
+    for (const [otherPlayerId, otherPlayer] of playerMap.entries()) {
+      if (otherPlayerId === projectileOwner) continue;
+      
+      const projOtherPlayerDist = Math.hypot(projectile.delay_x - otherPlayer.x, projectile.delay_x - otherPlayer.y);
+      if (projOtherPlayerDist - otherPlayer.radius - projectile.radius < 1) {
+        if (projectileOwner === myid) {
+          projectileMap.delete(projId);
+          rtcSendMessage("projdel", JSON.stringify({
+            id: projId
+          }));
+
+          console.log("HIT!");
+          
+          rtcSendMessage("hit", JSON.stringify({
             by: myid,
             projId: projId
           }));
@@ -249,5 +346,6 @@ export {
   spawnEnemies, 
   handleMovement, 
   performHitscanDetection, 
-  collisionDetection 
+  collisionDetection,
+  collisionDetectionDelay
 };
