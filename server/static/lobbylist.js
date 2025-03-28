@@ -1,8 +1,10 @@
 const SERVER_LOCATION = window.location.hostname // Use environment variable or current hostname
-const SERVER_PORT = 8100 // Shouldn't even need this anymore but whatever
-const SERVER_URL = SERVER_LOCATION + ":" + SERVER_PORT
+const SERVER_PORT = window.location.port || ""; // Empty string as fallback for hosted environments
+const SERVER_URL = SERVER_LOCATION + (SERVER_PORT ? ":" + SERVER_PORT : "")
+const PROTOCOL = window.location.protocol
 
-console.log(`Connecting to server at ${SERVER_URL}`);
+console.log(`Connecting to server at ${PROTOCOL}//${SERVER_URL}`);
+
 
 const NETCODE_TYPES = ["DELAY-AVG", "DELAY-MAX", "ROLLBACK"];
 
@@ -13,29 +15,30 @@ window.onload = function () {
 };
 
 async function getLobbies() {
-    const url = "http://" + SERVER_URL + "/lobbies";
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Response status: ${response.status}`);
-      }
-  
-      const json = await response.json();
-      return json;
-    } catch (error) {
-      console.error(error.message);
+  const url = PROTOCOL + "//" + SERVER_URL + "/lobbies";
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
     }
+
+    const json = await response.json();
+    return json;
+  } catch (error) {
+    console.error(error.message);
+    return []; // Return empty array to prevent undefined errors
   }
+}
 
 function updateList() {
   // For now just get the server list
   let lobbylist = getLobbies().then(
-    function(value) {updateSuccess(value);},
-    function(error) {updateFailed();}
+    function (value) { updateSuccess(value); },
+    function (error) { updateFailed(); }
   );
 }
 
-function makeLobbyShowcase(name, id, players, max_players, netcode_type, disabled=false) {
+function makeLobbyShowcase(name, id, players, max_players, netcode_type, disabled = false) {
   // Returns an html element representing the given lobby
   if (disabled) {
     return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${netcode_type} NETCODE </p></div><div><button class="joinbutton" disabled>JOIN</button> </div></div>`
@@ -56,8 +59,8 @@ function updateSuccess(lobbies) {
 
   // Generate server buttons
   let lobbyelements = ""
-  for (var i = 0; i < lobbies.length; i++) { 
-    lobbyelements += makeLobbyShowcase(lobbies[i].name, lobbies[i].id, lobbies[i].players, lobbies[i].max_players, lobbies[i].netcodetype, (lobbies[i].players >= lobbies[i].max_players)) ; 
+  for (var i = 0; i < lobbies.length; i++) {
+    lobbyelements += makeLobbyShowcase(lobbies[i].name, lobbies[i].id, lobbies[i].players, lobbies[i].max_players, lobbies[i].netcodetype, (lobbies[i].players >= lobbies[i].max_players));
   }
 
   lobbylistelm.innerHTML = lobbyelements
@@ -88,13 +91,13 @@ function createLobby() {
     return;
   }
 
-  fetch("http://" + SERVER_URL + "/lobbies/new", {method: "POST", body: JSON.stringify({ name: lobbyname, max_players: lobbysize, netcodetype: NETCODE_TYPES[netcode_type] })});
+  fetch(PROTOCOL + "//" + SERVER_URL + "/lobbies/new", { method: "POST", body: JSON.stringify({ name: lobbyname, max_players: lobbysize, netcodetype: NETCODE_TYPES[netcode_type] }) });
   updateList();
 }
 
 function joinLobby(id) {
   // Send user to join the given lobby
-  window.location.href = "http://" + SERVER_URL + "/play/" + id + "?" + netcode_type;
+  window.location.href = PROTOCOL + "//" + SERVER_URL + "/play/" + id + "?" + netcode_type;
 }
 
 function switchNetcode() {

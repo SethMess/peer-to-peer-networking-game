@@ -58,9 +58,9 @@ class Laser {
   draw(c) {
     const elapsed = Date.now() - this.startTime;
     const opacity = 1 - (elapsed / this.duration);
-    
+
     if (opacity <= 0) return false;
-    
+
     c.beginPath();
     c.moveTo(this.startX, this.startY);
     c.lineTo(this.endX, this.endY);
@@ -69,7 +69,7 @@ class Laser {
     c.lineWidth = 3;
     c.stroke();
     c.globalAlpha = 1;
-    
+
     return true;
   }
 }
@@ -148,21 +148,21 @@ function performHitscanDetection(
 ) {
   let closestHit = null;
   let closestDistance = maxDistance;
-  
+
   for (const [playerId, otherPlayer] of playerMap.entries()) {
     if (playerId === myid) continue;
-    
+
     const dx = otherPlayer.x - startX;
     const dy = otherPlayer.y - startY;
     const projectionLength = dx * Math.cos(angle) + dy * Math.sin(angle);
-    
+
     if (projectionLength < 0) continue;
     if (projectionLength > closestDistance) continue;
-    
+
     const closestX = startX + Math.cos(angle) * projectionLength;
     const closestY = startY + Math.sin(angle) * projectionLength;
     const distance = Math.hypot(closestX - otherPlayer.x, closestY - otherPlayer.y);
-    
+
     if (distance <= otherPlayer.radius) {
       if (projectionLength < closestDistance) {
         closestHit = playerId;
@@ -170,11 +170,11 @@ function performHitscanDetection(
       }
     }
   }
-  
+
   if (closestHit) {
     console.log("Hit player with laser:", closestHit);
-    
-    rtcSendMessage("hit". JSON.stringify({
+
+    rtcSendMessage("hit", JSON.stringify({
       by: myid,
       weapon: WEAPON_TYPES.HITSCAN,
       damage: 10
@@ -201,15 +201,15 @@ function collisionDetection(
     const projPlayerDist = Math.hypot(projectile.x - player.x, projectile.y - player.y);
     if (projPlayerDist - player.radius - projectile.radius < 1) {
       console.log("Hit by projectile from player:", projectileOwner);
-      
+
       projectileMap.delete(projId);
       player.radius = Math.max(10, player.radius - 5);
-      
+
       rtcSendMessage("hit", JSON.stringify({
         by: projectileOwner,
         projId: projId
       }));
-      
+
       if (player.radius <= 10) {
         // This is where game over is detected, Do anything for the end of the game here or make a seprate function that is called here
         cancelAnimationFrame(animationId);
@@ -217,10 +217,10 @@ function collisionDetection(
         console.log("Game over - killed by player", projectileOwner);
       }
     }
-    
+
     for (const [otherPlayerId, otherPlayer] of playerMap.entries()) {
       if (otherPlayerId === projectileOwner) continue;
-      
+
       const projOtherPlayerDist = Math.hypot(projectile.x - otherPlayer.x, projectile.y - otherPlayer.y);
       if (projOtherPlayerDist - otherPlayer.radius - projectile.radius < 1) {
         if (projectileOwner === myid) {
@@ -228,7 +228,7 @@ function collisionDetection(
           rtcSendMessage("projdel|" + myid + "|" + JSON.stringify({
             id: projId
           }));
-          
+
           rtcSendMessage("hit|" + otherPlayerId + "|" + JSON.stringify({
             by: myid,
             projId: projId
@@ -241,13 +241,13 @@ function collisionDetection(
 }
 
 // Export all classes and functions at the end
-export { 
-  Player, 
-  Projectile, 
-  Laser, 
-  Enemy, 
-  spawnEnemies, 
-  handleMovement, 
-  performHitscanDetection, 
-  collisionDetection 
+export {
+  Player,
+  Projectile,
+  Laser,
+  Enemy,
+  spawnEnemies,
+  handleMovement,
+  performHitscanDetection,
+  collisionDetection
 };

@@ -21,15 +21,15 @@ function getOrCreatePlayer(playerMap, playerId, initialX, initialY) {
   if (playerId === undefined) {
     playerId = 1;
   }
-  
+
   let player = playerMap.get(playerId);
-  
+
   if (!player) {
     player = new Player(initialX, initialY, 30, 'red');
     playerMap.set(playerId, player);
     console.log(`Created new player with ID: ${playerId}`);
   }
-  
+
   return player;
 }
 
@@ -73,23 +73,23 @@ function handlePeerListChanges(
   if (new_player_list === current_player_list) {
     return { updatedPollCounter, updated: false };
   }
-  
+
   console.log("UPDATED PLAYER LIST: " + new_player_list);
-  
-  current_player_list.forEach(function(id) {
+
+  current_player_list.forEach(function (id) {
     if (!new_player_list.includes(id)) {
       peerLeft(id);
     }
   });
 
-  new_player_list.forEach(function(id) {
+  new_player_list.forEach(function (id) {
     if (!current_player_list.includes(id)) {
       peerJoined(id);
     }
   });
 
   rtc.createRTCs();
-  
+
   return {
     updatedPollCounter,
     updatedPlayerList: new_player_list,
@@ -121,7 +121,7 @@ function handleRTCMessagesDelay(
   delaySampleList.shift();
   delaySampleList.push(Date.now() - timestamp);
 
-  let packetdata = JSON.parse(split_message[3]);
+  let packetdata = split_message[3] ? JSON.parse(split_message[3]) : {}; // Error handling doesnt work
 
   // Left game messages
   if (eventname === "left") {
@@ -153,11 +153,11 @@ function handleRTCMessagesDelay(
         y: Number(packetdata.vy)
       }
     );
-    
+
     projectileMap.set(packetdata.id, projectile);
     return;
   }
-  
+
   // Projectile position update
   if (eventname === "projpos" && current_player_list.includes(senderid)) {
     const projectile = projectileMap.get(packetdata.id);
@@ -167,7 +167,7 @@ function handleRTCMessagesDelay(
     }
     return;
   }
-  
+
   // Projectile deletion
   if (eventname === "projdel" /*&& (current_player_list.includes(senderid) || senderid === myid)*/) {
     const projectile = projectileMap.get(packetdata.id);
@@ -184,11 +184,11 @@ function handleRTCMessagesDelay(
 
     //THis message was added trying to debug the projectile not spawning on player side
     rtcSendMessage("projdel|" + myid + "|" + JSON.stringify({
-        id: projId
-      }));
+      id: projId
+    }));
     const damage = packetdata.weapon === WEAPON_TYPES.HITSCAN ? 10 : 5;
     player.radius = Math.max(10, player.radius - damage);
-    
+
     if (player.radius <= 10) {
       cancelAnimationFrame(animationId);
       rtc.sendMessage("left|" + myid + "|" + Date.now() + "|{}");
@@ -267,11 +267,11 @@ function handleRTCMessagesRollback(
         y: Number(packetdata.vy)
       }
     );
-    
+
     projectileMap.set(packetdata.id, projectile);
     return;
   }
-  
+
   // Projectile position update
   if (eventname === "projpos" && current_player_list.includes(senderid)) {
     const projectile = projectileMap.get(packetdata.id);
@@ -281,7 +281,7 @@ function handleRTCMessagesRollback(
     }
     return;
   }
-  
+
   // Projectile deletion
   if (eventname === "projdel" /*&& (current_player_list.includes(senderid) || senderid === myid)*/) {
     const projectile = projectileMap.get(packetdata.id);
@@ -298,11 +298,11 @@ function handleRTCMessagesRollback(
 
     //THis message was added trying to debug the projectile not spawning on player side
     rtcSendMessage("projdel|" + myid + "|" + JSON.stringify({
-        id: projId
-      }));
+      id: projId
+    }));
     const damage = packetdata.weapon === WEAPON_TYPES.HITSCAN ? 10 : 5;
     player.radius = Math.max(10, player.radius - damage);
-    
+
     if (player.radius <= 10) {
       cancelAnimationFrame(animationId);
       rtc.sendMessage("left|" + myid + "|" + Date.now() + "|{}");
@@ -338,42 +338,42 @@ function sendCords(
   projectileMap,
   canvas
 ) {
-  rtc.sendMessage("pos|" + myid + "|" + Date.now() +  "|" + JSON.stringify({
-    x: player.x, 
+  rtc.sendMessage("pos|" + myid + "|" + Date.now() + "|" + JSON.stringify({
+    x: player.x,
     y: player.y,
     radius: player.radius
   }));
-  
+
   projectileMap.forEach((projectile, id) => {
     projectile.update();
-    
-    rtc.sendMessage("projpos|" + myid + "|" + Date.now() +  "|" + JSON.stringify({
+
+    rtc.sendMessage("projpos|" + myid + "|" + Date.now() + "|" + JSON.stringify({
       id: id,
-      x: projectile.x, 
+      x: projectile.x,
       y: projectile.y
     }));
-    
-    if (projectile.x < -50 || projectile.x > canvas.width + 50 || 
-        projectile.y < -50 || projectile.y > canvas.height + 50) {
+
+    if (projectile.x < -50 || projectile.x > canvas.width + 50 ||
+      projectile.y < -50 || projectile.y > canvas.height + 50) {
       projectileMap.delete(id);
-      rtc.sendMessage("projdel|" + myid + "|" + Date.now() +  "|" + JSON.stringify({
+      rtc.sendMessage("projdel|" + myid + "|" + Date.now() + "|" + JSON.stringify({
         id: id
       }));
-      
+
     }
   });
 }
 
-export { 
-  serverConfig, 
+export {
+  serverConfig,
   WS_URL,
   NETCODE_TYPES,
-  getOrCreatePlayer, 
-  removePlayer, 
-  waitForConnection, 
-  waitForRTCConnection, 
-  handlePeerListChanges, 
-  handleRTCMessagesDelay, 
-  handleRTCMessagesRollback, 
-  sendCords 
+  getOrCreatePlayer,
+  removePlayer,
+  waitForConnection,
+  waitForRTCConnection,
+  handlePeerListChanges,
+  handleRTCMessagesDelay,
+  handleRTCMessagesRollback,
+  sendCords
 };
