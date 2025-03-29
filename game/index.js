@@ -40,6 +40,11 @@ canvas.width = innerWidth;
 canvas.height = innerHeight;
 const c = canvas.getContext('2d');
 const scoreEl = document.querySelector('#scoreEl');
+const delaycheckbox = document.getElementById("enableartdelay");
+const delaysettings = document.getElementById("delaysettings");
+const delayslider = document.getElementById("artdelay");
+const delaysliderrand = document.getElementById("artdelayrand");
+const delaysliderhead = document.getElementById("delaysliderhead");
 
 // Game constants and variables
 const player_poll_frames = 120;
@@ -49,17 +54,17 @@ let rtc = null;
 let netcode_type = null; // Holds the nype of netcode being used
 let current_player_list = [];
 
-const DELAY_SAMPLES = 10 // The number of samples used to determine how delayed this peer's connection is
-const DELAY_FRAME_SIZE = 10 // The number of frames we make wait to make a copy of the player's position
-let last_pos_poll_ms = Date.now();
-// NOTE: Only used for player position, bullets are much more accurate
-const PLAYER_PREV_POS_COUNT = 20
-let delay_list = Array(DELAY_SAMPLES); // Delay samples going back DELAY_SAMPLES samples
+let delay_dict = {}; // Stores data of incoming delay for each player, used to send out "pong" packets
+let DELAY_SEND_INTERVAL = 100;
+let DELAY_SAMPLE_SIZE = 10;
+let delay_list = Array(DELAY_SAMPLE_SIZE)
 delay_list.fill(0);
 let delay = 0; // The calculated delay used by delay-based netcode
 let packet_list = new PriorityQueue(function(a,b) {a.timestamp - b.timestamp});
 let latest_pos_ms = 0;
-let latest_shoot_ms = 0;
+let art_delay = 0;
+let art_delay_rand = 0;
+let art_delay_enabled = false;
 
 let myid = null;
 let animationId;
@@ -226,6 +231,7 @@ function handleMovementDelay(player, keys, speed = 3) {
 // Helper functions
 function peerLeft(peerid) {
   console.log("PEER LEFT: " + peerid);
+  delete delay_dict[peerid];
   removePlayer(playerMap, peerid);
 }
 
@@ -240,18 +246,38 @@ function sendCords() {
     myid, 
     player,
     projectileMap,
+    broadcastRTC,
     canvas
   );
 }
 
+function sendDelayInfo() {
+  // Used to send out intermittent delay packets
+  broadcastRTC("pong", JSON.stringify(delay_dict));
+  globalThis.setTimeout(function() {sendDelayInfo();}, DELAY_SEND_INTERVAL)
+}
+
 function broadcastRTC(packet_type, packet_body) {
   // This will make it easier to standardize how packets are sent
+  // Also allows for artifical delay to be introduced for testing
+
   if (!packet_body) {
     console.log("INVALID PACKET!")
     console.log(`${packet_type}|${myid}|${Date.now()}|${packet_body}`)
     return;
   }
-  rtc.sendMessage(`${packet_type}|${myid}|${Date.now()}|${packet_body}`);
+
+  let time = Date.now()
+  let message = `${packet_type}|${myid}|${time}|${packet_body}`;
+  let rand_delay = Number(Math.random() * art_delay_rand)
+  
+  if (art_delay_enabled) { // Artifical delay
+    console.log(rand_delay + art_delay)
+    // final_delay = final_delay + (Math.random() * art_delay_rand)
+    globalThis.setTimeout(function() {rtc.sendMessage(message);}, rand_delay + art_delay)
+  } else { // No artifical delay
+    rtc.sendMessage(message);
+  }
 }
 
 function establishRTCConnection(lobbyid) {
@@ -276,6 +302,7 @@ function establishRTCConnection(lobbyid) {
       cancelAnimationFrame,
       sendCords,
       (netcode_type * 2) + 2, // 2 frames for DELAY-2 (0), 4 frames for DELAY-4 (1)
+      delay_dict,
       delay_list,
       packet_list
     );
@@ -312,6 +339,7 @@ function gameCode() {
   
   broadcastRTC("forceupdate", "{}");
   sendCords();
+  if (netcode_type != 2) {sendDelayInfo();}
   animate();
 }
 
@@ -460,5 +488,31 @@ window.addEventListener('keyup', (event) => {
       break;
   }
 });
+
+// Artifical Delay settings
+
+delaycheckbox.addEventListener("change", () => {
+  if (delaycheckbox.checked) {
+    delaysettings.style.visibility = "visible";
+    art_delay_enabled = true
+  } else {
+    delaysettings.style.visibility = "hidden";
+    art_delay_enabled = false
+  }
+});
+
+delayslider.addEventListener("change", () => {
+  art_delay = delayslider.value;
+  delaysliderhead.innerHTML = "Delay: " + art_delay + "ms (+~" + art_delay_rand + "ms)";
+});
+
+delaysliderrand.addEventListener("change", () => {
+  art_delay_rand = delaysliderrand.value;
+  delaysliderhead.innerHTML = "Delay: " + art_delay + "ms (+~" + art_delay_rand + "ms)";
+});
+
+// Start with artifical delay hidden
+delaysettings.style.visibility = "hidden";
+art_delay_enabled = false
 
 window.onload = main;

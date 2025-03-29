@@ -26,6 +26,16 @@
         <p class="netcodetype">LOADING...</p>
         <p>DELAY INFO:</p>
         <p class="delaylist">LOADING...</p>
+        <p>Artifical Delay: </p>
+        <div>
+            <input type="checkbox" id="enableartdelay" name="enableartdelay"/>
+            <label for="enableartdelay">Enabled?</label>
+        </div>
+        <div id="delaysettings">
+            <p id="delaysliderhead">Delay: 0ms (+~0ms)</p>
+            <input type="range" id="artdelay" name="artdelay" min="0" max="300"  step="5" value="0"/>
+            <input type="range" id="artdelayrand" name="artdelayrand" min="0" max="100"  step="1" value="0"/>
+        </div>
     </div>
     <canvas></canvas>
     <script src="index.js" type="module"></script>

@@ -9,6 +9,7 @@ class Player {
     this.delay_y = y; // Only used by non-remote player
     this.radius = radius;
     this.color = color;
+    this.last_pos_time = 0;
   }
 
   draw(c) {
@@ -286,10 +287,11 @@ function collisionDetectionDelay(
 ) {
   // Player-projectile collisions
   for (const [projId, projectile] of projectileMap.entries()) {
+    
     const projectileOwner = projId.split('-')[0];
     if (projectileOwner === myid) continue;
 
-    const projPlayerDist = Math.hypot(projectile.x - player.delay_x, projectile.y - player.delay_y);
+    const projPlayerDist = Math.hypot(projectile.delay_x - player.delay_x, projectile.delay_y - player.delay_y);
     if (projPlayerDist - player.radius - projectile.radius < 1) {
       console.log("Hit by projectile from player:", projectileOwner);
       
@@ -313,11 +315,15 @@ function collisionDetectionDelay(
       }
     }
     
+    console.log("HERE")
+
     for (const [otherPlayerId, otherPlayer] of playerMap.entries()) {
       if (otherPlayerId === projectileOwner) continue;
+      console.log("HERE")
       
       const projOtherPlayerDist = Math.hypot(projectile.delay_x - otherPlayer.x, projectile.delay_x - otherPlayer.y);
       if (projOtherPlayerDist - otherPlayer.radius - projectile.radius < 1) {
+        console.log("HITTING OTHER PLAYER")
         if (projectileOwner === myid) {
           projectileMap.delete(projId);
           rtcSendMessage("projdel", JSON.stringify({

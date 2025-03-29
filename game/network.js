@@ -142,7 +142,8 @@ function handleRTCMessagesDelay(
   cancelAnimationFrame,
   sendCords,
   delayFrames,
-  delaySampleList,
+  delayDict,
+  delayList,
   packetList
 ) {
   let split_message = message.data.split("|");
@@ -150,9 +151,9 @@ function handleRTCMessagesDelay(
   let senderid = split_message[1];
   let timestamp = Number(split_message[2]);
 
-  // Add delay info to sample list
-  delaySampleList.shift();
-  delaySampleList.push(Date.now() - timestamp);
+  // Add delay info to sample dict
+  delayDict[senderid] = Date.now() - timestamp;
+  // console.log((Date.now() - timestamp) + "ms")
 
   let packetdata = JSON.parse(split_message[3]);
 
@@ -165,10 +166,11 @@ function handleRTCMessagesDelay(
   // Location update messages
   if (eventname === "pos" && current_player_list.includes(senderid)) {
     let edit_player = playerMap.get(senderid);
-    if (edit_player) {
+    if (edit_player && edit_player.last_pos_time < timestamp) {
       edit_player.x = Number(packetdata.x);
       edit_player.y = Number(packetdata.y);
       edit_player.radius = Number(packetdata.radius);
+      edit_player.last_pos_time = timestamp
       playerMap.set(senderid, edit_player);
     }
     return;
@@ -224,7 +226,7 @@ function handleRTCMessagesDelay(
     
     if (player.radius <= 10) {
       cancelAnimationFrame(animationId);
-      rtc.sendMessage("left", "{}");
+      rtcsendMessage("left", "{}");
       console.log("Game over - killed by player", packetdata.by);
     }
     return;
@@ -247,6 +249,14 @@ function handleRTCMessagesDelay(
   if (eventname === "forceupdate") {
     sendCords();
     return;
+  }
+
+  // Delay data
+  if (eventname === "pong") {
+    if (Object.hasOwn(packetdata, myid)) { // If this has delay data about ourself, use it
+      delayList.shift();
+      delayList.push(packetdata[myid]);
+    }
   }
 }
 
@@ -369,9 +379,10 @@ function sendCords(
   myid,
   player,
   projectileMap,
+  rtcsend,
   canvas
 ) {
-  rtc.sendMessage("pos|" + myid + "|" + Date.now() +  "|" + JSON.stringify({
+  rtcsend("pos", JSON.stringify({
     x: player.x, 
     y: player.y,
     radius: player.radius
@@ -380,7 +391,7 @@ function sendCords(
   projectileMap.forEach((projectile, id) => {
     projectile.update();
     
-    rtc.sendMessage("projpos|" + myid + "|" + Date.now() +  "|" + JSON.stringify({
+    rtcsend("projpos", JSON.stringify({
       id: id,
       x: projectile.x, 
       y: projectile.y
@@ -389,7 +400,7 @@ function sendCords(
     if (projectile.x < -50 || projectile.x > canvas.width + 50 || 
         projectile.y < -50 || projectile.y > canvas.height + 50) {
       projectileMap.delete(id);
-      rtc.sendMessage("projdel|" + myid + "|" + Date.now() +  "|" + JSON.stringify({
+      rtcsend("projdel", JSON.stringify({
         id: id
       }));
       
