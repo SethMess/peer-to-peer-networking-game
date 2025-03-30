@@ -22,6 +22,7 @@ h1 {
 
 .flex-container-h {
     display: flex;
+    flex-wrap: wrap;
     flex-direction: row;
 }
 
@@ -44,6 +45,7 @@ h1 {
     font-weight: 800;
     font-size: 1.0em;
     border-left: 2px solid darkolivegreen;
+    width: 100%;
 }
 
 .joinbutton:disabled{
@@ -125,9 +127,10 @@ button:disabled{
 .lobbylistfooter {
     margin: 0px;
     text-align: center;
-    background-color: whitesmoke;
+    background-color: lightgray;
     border-radius: 0px 0px 5px 5px;
     margin: 5px;
+    max-width: 100%;
 }
 
 input{
@@ -135,7 +138,12 @@ input{
     font-weight: 400;
     font-size: 1.0em;
     border: 0.0px solid gray;
+    flex: 0;
   }
+
+.lobbyinputs{
+    justify-content: space-around;
+}
 
 input:invalid{
     background-color: lightcoral;
