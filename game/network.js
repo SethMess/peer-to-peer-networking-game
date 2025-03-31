@@ -24,7 +24,7 @@ const WS_URL = (() => {
   if (window.location.protocol === "https:") {
     return `wss://${window.location.hostname}`; // No port for HTTPS in production
   } else if (isLocal) {
-    return `ws://${window.location.hostname}:3001`; // Local development
+    return `ws://${window.location.hostname}:8100`; // Local development
   } else {
     return `ws://${window.location.hostname}`; // HTTP in production
   }

@@ -20,9 +20,10 @@ EXPOSE 3001
 # Change to server directory
 WORKDIR /app/server
 
+CMD deno run --allow-net --allow-read --allow-env siteserver.ts 0.0.0.0 8100
 # Run the appropriate command based on NODE_ENV
-CMD if [ "$NODE_ENV" = "production" ]; then \
-      deno run --allow-net --allow-read siteserver.ts 0.0.0.0 8100 443; \
-    else \
-      deno run --allow-net --allow-read siteserver.ts 0.0.0.0 8100 3001; \
-    fi
+# CMD if [ "$NODE_ENV" = "production" ]; then \
+#       deno run --allow-net --allow-read siteserver.ts 0.0.0.0 8100 443; \
+#     else \
+#       deno run --allow-net --allow-read siteserver.ts 0.0.0.0 8100 3001; \
+#     fi

@@ -7,14 +7,14 @@ services:
       dockerfile: Dockerfile
     ports:
       - "${SERVER_PORT:-8100}:8100"
-      - "${WS_PORT:-443}:443"
-      - "${DEV_WS_PORT:-3001}:3001"
+      # - "${WS_PORT:-443}:443"
+      # - "${DEV_WS_PORT:-3001}:3001"
     restart: unless-stopped
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - SERVER_LOCATION=${RENDER_EXTERNAL_HOSTNAME:-localhost}
       - SERVER_PORT=${SERVER_PORT:-8100}
-      - WS_PORT=${WS_PORT:-443}
-      - DEV_WS_PORT=${DEV_WS_PORT:-3001}
+      # - WS_PORT=${WS_PORT:-443}
+      # - DEV_WS_PORT=${DEV_WS_PORT:-3001}
     env_file:
       - .env

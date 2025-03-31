@@ -6,8 +6,11 @@ const sono = new Sono();
 
 // Now takes command line arguments for hosting params
 // EX. deno --allow-net --allow-read siteserver.ts localhost 8100 3001
-const PORT = Deno.args[1]; // Default HTTP port
-const WEBSOCKETPORT = Deno.args[2]; // Chose it cause it is cool B)
+// const PORT = Deno.args[1]; // Default HTTP port
+// const WEBSOCKETPORT = Deno.args[2]; // Chose it cause it is cool B)
+// In production, use standard ports
+const PORT = Deno.env.get("PORT") || Deno.args[1] || "8080";
+// const WEBSOCKETPORT = Deno.args[2] || (Deno.env.get("NODE_ENV") === "production" ? "443" : "3001");
 const HOSTNAME = Deno.args[0]; // <-- CHANGE HERE AND IN lobbylist.js TO YOUR LOCAL IP TO AVOID SOP!
 const MAX_LOBBIES = 10;
 
@@ -109,8 +112,30 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req: Request) => {
     body = await req.text();
   }
 
+  // WebSocket handling
+  if (req.method === "GET" && split_path.length == 3 && split_path[1] === "join") {
+    if (id_list.includes(split_path[2])) {
+      // If lobby is full, refuse connection
+      if (isLobbyFilled(split_path[2])) {
+        return new Response("Lobby Full!", { status: 409 });
+      }
+
+      // Lobby exists, connect user
+      return sono.connect(req, () => {
+        console.log("New client connected to lobby " + split_path[2]);
+      });
+    }
+    else {
+      // Lobby does not exist
+      return new Response("Lobby not found!", { status: 404 });
+    }
+  }
+
+
+  //HTTP signaling
+
   // Index Page
-  if (req.method === "GET" && url.pathname === "/") {
+  else if (req.method === "GET" && url.pathname === "/") {
     console.log("FETCH INDEX")
     return serveFile(req, "./static/lobbylist.html");
   }
@@ -198,38 +223,38 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req: Request) => {
 });
 
 // WEBSOCKET PORT
-Deno.serve({ port: WEBSOCKETPORT, hostname: HOSTNAME }, async (req: Request) => {
+// Deno.serve({ port: WEBSOCKETPORT, hostname: HOSTNAME }, async (req: Request) => {
 
-  const url = new URL(req.url);
-  const split_path = url.pathname.split("/");
+//   const url = new URL(req.url);
+//   const split_path = url.pathname.split("/");
 
-  let body = "";
-  if (req.body) {
-    body = await req.text();
-  }
+//   let body = "";
+//   if (req.body) {
+//     body = await req.text();
+//   }
 
-  // Connect to server (WebSocket/RTC)
-  else if (req.method === "GET" && split_path.length == 3 && split_path[1] === "join") {
-    if (id_list.includes(split_path[2])) {
+//   // Connect to server (WebSocket/RTC)
+//   else if (req.method === "GET" && split_path.length == 3 && split_path[1] === "join") {
+//     if (id_list.includes(split_path[2])) {
 
-      // If lobby is full, refuse connection
-      let players_inside = Object.keys(sono.channelsList[split_path[2]]).length;
-      if (isLobbyFilled(split_path[2])) {
-        return new Response("Lobby Full!", { status: 409 });
-      }
+//       // If lobby is full, refuse connection
+//       let players_inside = Object.keys(sono.channelsList[split_path[2]]).length;
+//       if (isLobbyFilled(split_path[2])) {
+//         return new Response("Lobby Full!", { status: 409 });
+//       }
 
-      // Lobby exists, connect user
-      return sono.connect(req, () => {
-        console.log("New client connected to lobby " + split_path[2]);
-      });
-    }
-    else {
-      // Lobby does not exist, do nothing
-      return new Response("Lobby not found!", { status: 404 });
-    }
-  }
+//       // Lobby exists, connect user
+//       return sono.connect(req, () => {
+//         console.log("New client connected to lobby " + split_path[2]);
+//       });
+//     }
+//     else {
+//       // Lobby does not exist, do nothing
+//       return new Response("Lobby not found!", { status: 404 });
+//     }
+//   }
 
-  else { // If all else fails, 404!
-    return new Response("404 Not Found", { status: 404 });
-  }
-});
+//   else { // If all else fails, 404!
+//     return new Response("404 Not Found", { status: 404 });
+//   }
+// });
