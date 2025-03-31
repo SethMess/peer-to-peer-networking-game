@@ -15,7 +15,7 @@ const serverConfig = {
 };
 
 // const WS_URL = "ws://localhost:3001"; // <- UPDATE TO CORRECT URL!!!
-const WS_URL = `ws://${window.location.hostname}:3001`;
+const WS_URL = `wss://${window.location.hostname}:3001`;
 const NETCODE_TYPES = ["DELAY-AVG", "DELAY-MAX", "ROLLBACK"];
 
 class Packet {
@@ -110,7 +110,7 @@ function handlePeerListChanges(
 
 // We need two functions for delay-based netcode.
 // One for getting packets, and nother for executing packets that we have based on delay
-function handleRTCMessagesDelayTEMP( 
+function handleRTCMessagesDelayTEMP(
   message,
   current_player_list,
   playerMap,
@@ -124,7 +124,7 @@ function handleRTCMessagesDelayTEMP(
   sendCords,
   delayFrames,
   delaySampleList,
-  packetList 
+  packetList
 ) {
   // Store current packet
   packetList.add();
@@ -220,8 +220,8 @@ function handleRTCMessagesDelay(
 
     //THis message was added trying to debug the projectile not spawning on player side
     rtcSendMessage("projdel", JSON.stringify({
-        id: projId
-      }));
+      id: projId
+    }));
     const damage = packetdata.weapon === WEAPON_TYPES.HITSCAN ? 10 : 5;
     player.radius = Math.max(10, player.radius - damage);
 
@@ -342,8 +342,8 @@ function handleRTCMessagesRollback(
 
     //THis message was added trying to debug the projectile not spawning on player side
     rtcSendMessage("projdel", JSON.stringify({
-        id: projId
-      }));
+      id: projId
+    }));
     const damage = packetdata.weapon === WEAPON_TYPES.HITSCAN ? 10 : 5;
     player.radius = Math.max(10, player.radius - damage);
 
@@ -384,14 +384,14 @@ function sendCords(
   canvas
 ) {
   rtcsend("pos", JSON.stringify({
-    x: player.x, 
+    x: player.x,
     y: player.y,
     radius: player.radius
   }));
 
   projectileMap.forEach((projectile, id) => {
     projectile.update();
-    
+
     rtcsend("projpos", JSON.stringify({
       id: id,
       x: projectile.x,
@@ -413,13 +413,13 @@ export {
   serverConfig,
   WS_URL,
   NETCODE_TYPES,
-  getOrCreatePlayer, 
-  removePlayer, 
-  waitForConnection, 
-  waitForRTCConnection, 
-  handlePeerListChanges, 
-  handleRTCMessagesDelay, 
-  handleRTCMessagesRollback, 
+  getOrCreatePlayer,
+  removePlayer,
+  waitForConnection,
+  waitForRTCConnection,
+  handlePeerListChanges,
+  handleRTCMessagesDelay,
+  handleRTCMessagesRollback,
   sendCords,
   Packet
 };
