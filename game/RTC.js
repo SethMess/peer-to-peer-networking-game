@@ -189,6 +189,11 @@ export class SonoRTC {
   sendMessage(message) {
     // Send message to all clients
     //console.log(this.mychannelclients);
+    
+    if (!this.mychannelclients || !Array.isArray(this.mychannelclients)) {
+      console.warn("mychannelclients is undefined; message not sent");
+      return;
+    }
     this.mychannelclients.forEach(client => {
       if(client === this.myid || this.dataStreams[client].readyState != "open"){
         // NOTHING FOR YOURSEWL
