@@ -16,9 +16,21 @@ const serverConfig = {
 
 // const WS_URL = "ws://localhost:3001"; // <- UPDATE TO CORRECT URL!!!
 // const WS_URL = `wss://${window.location.hostname}:3001`;
-const WS_URL = window.location.protocol === "https:"
-  ? `wss://${window.location.hostname}:3001`
-  : `ws://${window.location.hostname}:3001`;
+const WS_URL = (() => {
+  // Check if we're in a deployed environment or local
+  const isLocal = window.location.hostname === 'localhost' || 
+                 window.location.hostname === '127.0.0.1';
+  
+  if (window.location.protocol === "https:") {
+    return `wss://${window.location.hostname}`; // No port for HTTPS in production
+  } else if (isLocal) {
+    return `ws://${window.location.hostname}:3001`; // Local development
+  } else {
+    return `ws://${window.location.hostname}`; // HTTP in production
+  }
+})();
+console.log("Using WebSocket URL:", WS_URL);
+
 const NETCODE_TYPES = ["DELAY-AVG", "DELAY-MAX", "ROLLBACK"];
 
 class Packet {

@@ -1,5 +1,7 @@
 FROM denoland/deno:latest
 
+ENV NODE_ENV=production
+
 # Set working directory
 WORKDIR /app
 
@@ -7,14 +9,20 @@ WORKDIR /app
 COPY server/ ./server/
 COPY game/ ./game/
 
-# Set proper permissions, probably not needed
+# Set proper permissions
 RUN chmod -R 755 /app
 
-# Expose both HTTP and WebSocket ports
+# Expose ports
 EXPOSE 8100
+EXPOSE 443
 EXPOSE 3001
 
-# Change the working directory to server before running
+# Change to server directory
 WORKDIR /app/server
 
-CMD ["deno", "run", "--allow-net", "--allow-read", "siteserver.ts", "0.0.0.0", "8100", "3001"]
+# Run the appropriate command based on NODE_ENV
+CMD if [ "$NODE_ENV" = "production" ]; then \
+      deno run --allow-net --allow-read siteserver.ts 0.0.0.0 8100 443; \
+    else \
+      deno run --allow-net --allow-read siteserver.ts 0.0.0.0 8100 3001; \
+    fi
