@@ -2,6 +2,8 @@ import { SonoClient } from 'https://deno.land/x/sono@v1.2/src/sonoClient.js';
 import { Player, Projectile, Laser } from './classes.js';
 import { WEAPON_TYPES } from './utils.js';
 import { PriorityQueue } from './prioqueue.js';
+import { RollbackManager } from './rollback.js';
+
 
 const serverConfig = {
   iceServers: [
@@ -287,7 +289,8 @@ function handleRTCMessagesRollback(
   lasers,
   animationId,
   cancelAnimationFrame,
-  sendCords
+  sendCords,
+  rollbackManager
 ) {
   console.log("RTC: " + message.data);
   let split_message = message.data.split("|");
@@ -295,6 +298,16 @@ function handleRTCMessagesRollback(
   let senderid = split_message[1];
   let timestamp = split_message[2];
   let packetdata = JSON.parse(split_message[3]);
+
+  // Handle remote input by storing it in the rollback manager
+  if (eventname === "input" && current_player_list.includes(senderid)) {
+    rollbackManager.recordRemoteInput(
+      senderid, 
+      Number(packetdata.frame), 
+      packetdata.input
+    );
+    return;
+  }
 
   // Left game messages
   if (eventname === "left") {

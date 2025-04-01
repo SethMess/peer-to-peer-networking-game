@@ -33,6 +33,8 @@ import {
   debugRTCConnection
 } from './utils.js';
 import { PriorityQueue } from './prioqueue.js';
+import { RollbackManager } from './rollback.js';
+
 
 // Canvas setup
 const canvas = document.querySelector('canvas');
@@ -73,6 +75,10 @@ let currentWeapon = WEAPON_TYPES.PROJECTILE;
 let lastHitscanTime = 0;
 let projectileCounter = 0;
 
+// Rollback manager
+let rollbackManager = null;
+
+
 // Game objects
 const playerMap = new Map();
 const projectileMap = new Map();
@@ -106,8 +112,32 @@ function animate() {
       // Maximum Delay Based, delay = most delayed package from peers 
       delay = Math.max(...delay_list);
       break;
-    default:
+    case 2:
       // Rollback/Default  
+      rollbackManager.recordLocalInput({
+        w: keys.w.pressed,
+        a: keys.a.pressed,
+        s: keys.s.pressed,
+        d: keys.d.pressed
+      });
+      
+      // Update the rollback simulation state
+      rollbackManager.update();
+      
+      // Send input to peers
+      broadcastRTC("input", JSON.stringify({
+        frame: rollbackManager.currentFrame,
+        input: {
+          w: keys.w.pressed,
+          a: keys.a.pressed,
+          s: keys.s.pressed,
+          d: keys.d.pressed
+        }
+      }));
+      break;
+    default:
+
+
   } 
 
   // delay = Math.floor(Math.random() * 700); // TEMP FOR TESTING DELAYED INPUTS
@@ -130,7 +160,8 @@ function animate() {
   }
   
   if (netcode_type == 2) {
-    handleMovement(player, keys);
+    // handleMovement(player, keys);
+    // For rollback, movement is already handled inside the rollback manager
   } else {
     handleMovementDelay(player, keys);
   }
@@ -167,6 +198,10 @@ function animate() {
   });
 
   if (netcode_type == 2) {
+    // For rollback, collisions are already handled by the rollback manager
+    // However, we still need to send network messages for hits
+    // This checks for collisions on the final state for networking purposes only
+    // The actual physics was already handled in rollback simulation
     collisionDetection(
       player,
       playerMap,
@@ -193,6 +228,18 @@ function animate() {
   }
   
   sendCords();
+
+  if (netcode_type === 2 && rollbackManager.isShowingRollbackIndicator()) {
+    const elapsed = Date.now() - rollbackManager.lastRollbackTime;
+    const opacity = 1 - (elapsed / rollbackManager.rollbackIndicatorDuration);
+
+    c.fillStyle = `rgba(255, 0, 0, ${opacity * 0.3})`;
+    c.fillRect(0, 0, canvas.width, canvas.height);
+
+    c.font = '20px Arial';
+    c.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+    c.fillText(`Rollback: ${rollbackManager.rollbackFrames} frames`, 20, 50);
+  }
 }
 
 // DELAY-BASED FUNCTIONS
@@ -317,7 +364,8 @@ function establishRTCConnection(lobbyid) {
       lasers,
       animationId,
       cancelAnimationFrame,
-      sendCords
+      sendCords,
+      rollbackManager
     );
   }
 
@@ -339,6 +387,10 @@ function gameCode() {
   broadcastRTC("forceupdate", "{}");
   sendCords();
   if (netcode_type != 2) {sendDelayInfo();}
+
+  if (netcode_type === 2){
+    rollbackManager = new RollbackManager(playerMap, projectileMap, myid);
+  }
   animate();
 }
 
@@ -352,6 +404,7 @@ function main() {
   let netcodetypeelm = document.getElementsByClassName("netcodetype")[0];
   lobbynameelm.innerHTML = "LOBBY ID: " + lobbyid;
   netcodetypeelm.innerHTML = "NETCODE TYPE: " + NETCODE_TYPES[netcode_type];
+  
 
   sono = new SonoClient(WS_URL + '/join/' + lobbyid);
   waitForConnection(sono, lobbyid, establishRTCConnection);
