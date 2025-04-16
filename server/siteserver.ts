@@ -158,7 +158,7 @@ Deno.serve({ port: PORT, hostname: HOSTNAME }, async (req: Request) => {
       new_lobby.max_players = Number(lobby_info.max_players); // Max player count
       if (new_lobby.max_players < 2) { new_lobby.max_players = 2; }
       if (new_lobby.max_players > 8) { new_lobby.max_players = 8; }
-      new_lobby.netcodetype = lobby_info.netcodetype.substring(0, 32); // Netcode type
+      new_lobby.netcodetype = lobby_info.netcodetype; // Netcode type
 
       new_lobby.id = generateUniqueLobbyID(6); // Generate and log lobby id, create channel of that name
       id_list.push(new_lobby.id);

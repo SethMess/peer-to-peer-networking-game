@@ -41,9 +41,9 @@ function updateList() {
 function makeLobbyShowcase(name, id, players, max_players, netcode_type, disabled = false) {
   // Returns an html element representing the given lobby
   if (disabled) {
-    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${netcode_type} NETCODE </p></div><div><button class="joinbutton" disabled>JOIN</button> </div></div>`
+    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${NETCODE_TYPES[netcode_type]} NETCODE </p></div><div><button class="joinbutton" disabled>JOIN</button> </div></div>`
   } else {
-    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${netcode_type} NETCODE </p></div><div><button class="joinbutton" onclick="joinLobby('${id}')">JOIN</button> </div></div>`
+    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${NETCODE_TYPES[netcode_type]} NETCODE </p></div><div><button class="joinbutton" onclick="joinLobby('${id}', '${netcode_type}')">JOIN</button> </div></div>`
   }
 }
 
@@ -91,11 +91,11 @@ function createLobby() {
     return;
   }
 
-  fetch(PROTOCOL + "//" + SERVER_URL + "/lobbies/new", { method: "POST", body: JSON.stringify({ name: lobbyname, max_players: lobbysize, netcodetype: NETCODE_TYPES[netcode_type] }) });
+  fetch(PROTOCOL + "//" + SERVER_URL + "/lobbies/new", { method: "POST", body: JSON.stringify({ name: lobbyname, max_players: lobbysize, netcodetype: netcode_type }) });
   updateList();
 }
 
-function joinLobby(id) {
+function joinLobby(id, netcode_type) {
   // Send user to join the given lobby
   window.location.href = PROTOCOL + "//" + SERVER_URL + "/play/" + id + "?" + netcode_type;
 }
