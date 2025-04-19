@@ -350,6 +350,11 @@ function sendCords() {
 
 function sendDelayInfo() {
   // Used to send out intermittent delay packets
+
+  // broadcastRTC("pong", JSON.stringify(delay_dict));
+//   broadcastRTC("ping", "{}");
+//   globalThis.setTimeout(function() {sendDelayInfo();}, DELAY_SEND_INTERVAL)
+
   broadcastRTC("pong", JSON.stringify(delay_dict));
   globalThis.setTimeout(function () { sendDelayInfo(); }, DELAY_SEND_INTERVAL)
 }
@@ -394,6 +399,7 @@ function establishRTCConnection(lobbyid) {
       player,
       myid,
       rtc,
+      broadcastRTC,
       lasers,
       animationId,
       cancelAnimationFrame,

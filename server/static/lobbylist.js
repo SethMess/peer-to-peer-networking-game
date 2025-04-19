@@ -45,9 +45,11 @@ function makeLobbyShowcase(name, id, players, max_players, netcode_type, disable
   // Default to 0 if not found, though it should always be found
   const lobbyNetcodeValue = lobbyNetcodeIndex !== -1 ? lobbyNetcodeIndex : 0;
   if (disabled) {
-    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${netcode_type} NETCODE </p></div><div><button class="joinbutton" disabled>JOIN</button> </div></div>`
+    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${NETCODE_TYPES[netcode_type]} NETCODE </p></div><div><button class="joinbutton" disabled>JOIN</button> </div></div>`
   } else {
-    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${netcode_type} NETCODE </p></div><div><button class="joinbutton" onclick="joinLobby('${id}', ${lobbyNetcodeValue})">JOIN</button> </div></div>`
+    return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${NETCODE_TYPES[netcode_type]} NETCODE </p></div><div><button class="joinbutton" onclick="joinLobby('${id}', '${netcode_type}')">JOIN</button> </div></div>`
+//     return `<div class="lobbyitem flex-container-h"> <div> <p class="lobbyinfo">${name} | (${players}/${max_players}) | ${netcode_type} NETCODE </p></div><div><button class="joinbutton" onclick="joinLobby('${id}', ${lobbyNetcodeValue})">JOIN</button> </div></div>`
+
   }
 }
 
@@ -95,11 +97,14 @@ function createLobby() {
     return;
   }
 
-  fetch(PROTOCOL + "//" + SERVER_URL + "/lobbies/new", { method: "POST", body: JSON.stringify({ name: lobbyname, max_players: lobbysize, netcodetype: NETCODE_TYPES[netcode_type] }) });
+  fetch(PROTOCOL + "//" + SERVER_URL + "/lobbies/new", { method: "POST", body: JSON.stringify({ name: lobbyname, max_players: lobbysize, netcodetype: netcode_type }) });
   updateList();
 }
 
-function joinLobby(id, lobbyNetcodeType) {
+
+function joinLobby(id, netcode_type) {
+// function joinLobby(id, lobbyNetcodeType) {
+
   // Send user to join the given lobby
   // window.location.href = PROTOCOL + "//" + SERVER_URL + "/play/" + id + "?" + netcode_type;
   window.location.href = PROTOCOL + "//" + SERVER_URL + "/play/" + id + "?" + lobbyNetcodeType;

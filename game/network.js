@@ -155,6 +155,7 @@ function handleRTCMessagesDelay(
   player,
   myid,
   rtc,
+  rtcSendMessage,
   lasers,
   animationId,
   cancelAnimationFrame,
@@ -244,7 +245,7 @@ function handleRTCMessagesDelay(
 
     if (player.radius <= 10) {
       cancelAnimationFrame(animationId);
-      rtcsendMessage("left", "{}");
+      rtcSendMessage("left", "{}");
       console.log("Game over - killed by player", packetdata.by);
     }
     return;
@@ -269,11 +270,15 @@ function handleRTCMessagesDelay(
     return;
   }
 
-  // Delay data
+  // Send back packet with only timestamp
+  if (eventname === "ping") {
+    rtcSendMessage("pong", JSON.stringify({time : timestamp, id: senderid}));
+  }
+
   if (eventname === "pong") {
-    if (Object.hasOwn(packetdata, myid)) { // If this has delay data about ourself, use it
+    if (packetdata.id == myid) { // If this has delay data about ourself, use it
       delayList.shift();
-      delayList.push(packetdata[myid]);
+      delayList.push(timestamp - packetdata.time);
     }
   }
 }
