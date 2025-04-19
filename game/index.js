@@ -352,7 +352,7 @@ function sendDelayInfo() {
   // Used to send out intermittent delay packets
 
   // broadcastRTC("pong", JSON.stringify(delay_dict));
-//   broadcastRTC("ping", "{}");
+  broadcastRTC("ping", "{}");
 //   globalThis.setTimeout(function() {sendDelayInfo();}, DELAY_SEND_INTERVAL)
 
   broadcastRTC("pong", JSON.stringify(delay_dict));
