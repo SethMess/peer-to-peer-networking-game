@@ -20,9 +20,9 @@ const serverConfig = {
 // const WS_URL = `wss://${window.location.hostname}:3001`;
 const WS_URL = (() => {
   // Check if we're in a deployed environment or local
-  const isLocal = window.location.hostname === 'localhost' || 
-                 window.location.hostname === '127.0.0.1';
-  
+  const isLocal = window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1';
+
   if (window.location.protocol === "https:") {
     return `wss://${window.location.hostname}`; // No port for HTTPS in production
   } else if (isLocal) {
@@ -292,7 +292,7 @@ function handleRTCMessagesRollback(
   sendCords,
   rollbackManager
 ) {
-  console.log("RTC: " + message.data);
+  // console.log("RTC: " + message.data);
   let split_message = message.data.split("|");
   let eventname = split_message[0];
   let senderid = split_message[1];
@@ -302,8 +302,8 @@ function handleRTCMessagesRollback(
   // Handle remote input by storing it in the rollback manager
   if (eventname === "input" && current_player_list.includes(senderid)) {
     rollbackManager.recordRemoteInput(
-      senderid, 
-      Number(packetdata.frame), 
+      senderid,
+      Number(packetdata.frame),
       packetdata.input
     );
     return;
@@ -345,14 +345,14 @@ function handleRTCMessagesRollback(
   }
 
   // Projectile position update
-  if (eventname === "projpos" && current_player_list.includes(senderid)) {
-    const projectile = projectileMap.get(packetdata.id);
-    if (projectile) {
-      projectile.x = Number(packetdata.x);
-      projectile.y = Number(packetdata.y);
-    }
-    return;
-  }
+  // if (eventname === "projpos" && current_player_list.includes(senderid)) {
+  //   const projectile = projectileMap.get(packetdata.id);
+  //   if (projectile) {
+  //     projectile.x = Number(packetdata.x);
+  //     projectile.y = Number(packetdata.y);
+  //   }
+  //   return;
+  // }
 
   // Projectile deletion
   if (eventname === "projdel" /*&& (current_player_list.includes(senderid) || senderid === myid)*/) {
@@ -401,6 +401,7 @@ function handleRTCMessagesRollback(
     sendCords();
     return;
   }
+
 }
 
 function sendCords(
@@ -409,7 +410,8 @@ function sendCords(
   player,
   projectileMap,
   rtcsend,
-  canvas
+  canvas,
+  netcode_type
 ) {
   rtcsend("pos", JSON.stringify({
     x: player.x,
@@ -418,13 +420,16 @@ function sendCords(
   }));
 
   projectileMap.forEach((projectile, id) => {
-    projectile.update();
 
-    rtcsend("projpos", JSON.stringify({
-      id: id,
-      x: projectile.x,
-      y: projectile.y
-    }));
+    if (netcode_type !== 2) {
+      projectile.update();
+
+      rtcsend("projpos", JSON.stringify({
+        id: id,
+        x: projectile.x,
+        y: projectile.y
+      }));
+    }
 
     if (projectile.x < -50 || projectile.x > canvas.width + 50 ||
       projectile.y < -50 || projectile.y > canvas.height + 50) {

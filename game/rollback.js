@@ -1,5 +1,5 @@
 // This file implements various classes used for rollback netcode
-import { handleMovement } from './classes.js';
+import { handleMovement, Player, Projectile } from './classes.js';
 
 
 class GameState {
@@ -42,47 +42,76 @@ class GameState {
   apply(playerMap, projectileMap) {
     console.log(`[GameState] Applying state from frame: ${this.timestamp}`); // DEBUG
 
-    // Clear existing maps before applying state to handle entities that might not exist in the saved state
-    // Note: This assumes your main game loop can handle adding players/projectiles back if needed,
-    // or that the maps passed in are the ones being directly modified.
-    // playerMap.clear(); // Consider if you need to clear or just update existing ones
-    // projectileMap.clear(); // Consider if you need to clear or just update existing ones
+    // --- Player State Restoration ---
+    const statePlayerIds = new Set(this.players.keys());
 
+    // Remove players from the game map that are NOT in the saved state
+    // const playersToRemove = [];
+    // playerMap.forEach((_, id) => {
+    //   if (!statePlayerIds.has(id)) {
+    //     playersToRemove.push(id);
+    //   }
+    // });
+    // playersToRemove.forEach(id => {
+    //   console.log(`[GameState Apply] Removing player ${id} (not in saved state)`); // DEBUG
+    //   playerMap.delete(id);
+    // });
 
-    // Restore player states
+    // Update or warn about players based on the saved state
     this.players.forEach((playerData, id) => {
       let player = playerMap.get(id);
-      if (!player) {
-        // If player doesn't exist, you might need to recreate them based on playerData
-        // This depends on how your Player class is structured and managed.
-        console.warn(`[GameState Apply] Player ${id} not found in target map.`);
-        // Example: player = new Player(id, playerData.x, playerData.y, ...); playerMap.set(id, player);
-      }
       if (player) {
+        // Player exists, update its state
         player.x = playerData.x;
         player.y = playerData.y;
         player.radius = playerData.radius;
-        // Restore other properties...
+        player.color = playerData.color;
+        // Apply other properties if needed
+      } else {
+        // Player is in saved state but not in the current game map
+        console.log(`[GameState Apply] Player ${id} not found in target map. CREATING.`); // DEBUG
+
+        player = new Player(playerData.x, playerData.y, playerData.radius, playerData.color);
+        playerMap.set(id, player);
       }
     });
-    // Optional: Remove players from playerMap that are not in this.players if necessary
 
-    // Restore projectile states
-    // Similar logic for projectiles - handle creation/deletion if necessary
+    // --- Projectile State Restoration ---
+    const stateProjectileIds = new Set(this.projectiles.keys());
+
+    //Old delete code
+    // Remove projectiles from the game map that are NOT in the saved state
+    // const projectilesToRemove = [];
+    // projectileMap.forEach((_, id) => {
+    //   if (!stateProjectileIds.has(id)) {
+    //     projectilesToRemove.push(id);
+    //   }
+    // });
+    // projectilesToRemove.forEach(id => {
+    //   // console.log(`[GameState Apply] Removing projectile ${id} (not in saved state)`); // DEBUG (Can be noisy)
+    //   projectileMap.delete(id);
+    // });
+
+    // Update or warn about projectiles based on the saved state
     this.projectiles.forEach((projData, id) => {
       let proj = projectileMap.get(id);
-      if (!proj) {
-        console.warn(`[GameState Apply] Projectile ${id} not found in target map.`);
-        // Example: proj = new Projectile(...); projectileMap.set(id, proj);
-      }
       if (proj) {
+        // Projectile exists, update its state
         proj.x = projData.x;
         proj.y = projData.y;
+        proj.radius = projData.radius;
+        proj.color = projData.color;
         proj.velocity = { ...projData.velocity };
-        // Restore other properties...
+        // Apply other properties if needed
+      } else {
+        // Projectile is in saved state but not in the current game map
+        console.warn(`[GameState Apply] Projectile ${id} found in saved state but not in target map. Cannot restore.`);
+        // If recreation is needed:
+        // proj = new Projectile(id, projData.x, ...); // Requires Projectile class access and potentially more data
+        // projectileMap.set(id, proj);
       }
     });
-    // Optional: Remove projectiles from projectileMap that are not in this.projectiles if necessary
+    console.log(`[GameState Apply] Finished applying state. PlayerMap size: ${playerMap.size}`); // Log end
   }
 }
 
@@ -123,7 +152,7 @@ class InputBuffer {
 
     // Return predicted input if no actual input exists
     const predictedInput = this.getPredictedInput(playerId);
-    console.log(`[InputBuffer] Using predicted input for Player ${playerId} at Frame ${frame}:`, predictedInput); // DEBUG
+    // console.log(`[InputBuffer] Using predicted input for Player ${playerId} at Frame ${frame}:`, predictedInput); // DEBUG
     return predictedInput;
   }
 
@@ -131,12 +160,9 @@ class InputBuffer {
     if (this.predictions.has(playerId)) {
       return this.predictions.get(playerId);
     }
-
     // Default prediction is "do nothing"
     return { w: false, a: false, s: false, d: false };
 
-    // Alternative is keep doing what they did last
-    //   return { w: false, a: false, s: false, d: false };
   }
 
   updatePrediction(playerId) {
@@ -151,7 +177,13 @@ class InputBuffer {
   }
 }
 
-
+function inputsAreEqual(inputA, inputB) {
+  if (!inputA || !inputB) return false; // Handle cases where one might be undefined
+  return inputA.w === inputB.w &&
+    inputA.a === inputB.a &&
+    inputA.s === inputB.s &&
+    inputA.d === inputB.d;
+}
 
 
 class RollbackManager {
@@ -160,15 +192,17 @@ class RollbackManager {
     this.projectileMap = projectileMap;
     this.myId = myId;
     this.frameStates = []; // Array of GameState objects
-    this.inputBuffer = new InputBuffer();
+    this.inputBuffer = new InputBuffer(300);
     this.currentFrame = 0;
-    this.lastConfirmedFrame = 0; // You might need logic to update this based on acknowledgements from peers
-    this.syncInterval = 5; // Save state every 5 frames
+    this.lastConfirmedFrame = 0;
+    this.syncInterval = 1; // Save state every 1 frames
 
     this.isRollingBack = false;
     this.rollbackFrames = 0;
     this.lastRollbackTime = 0;
     this.rollbackIndicatorDuration = 500; // ms
+
+    this.inputIgnoreThreshold = 1000; // Ignore inputs older than this many frames
 
     console.log(`[RollbackManager] Initialized for Player ${myId}`); // DEBUG
   }
@@ -192,8 +226,8 @@ class RollbackManager {
         GameState.captureState(this.currentFrame, this.playerMap, this.projectileMap)
       );
 
-      // Keep only recent states (e.g., last ~2 seconds at 60fps)
-      const maxSavedStates = 120; // Adjust as needed
+      // Keep only recent states 
+      const maxSavedStates = 120;
       while (this.frameStates.length > maxSavedStates) {
         this.frameStates.shift();
       }
@@ -206,25 +240,39 @@ class RollbackManager {
   }
 
   recordRemoteInput(playerId, frame, input) {
-    console.log(`[RollbackManager] Received remote input for Player ${playerId} at Frame ${frame}:`, input); // DEBUG
-    const hadInputAlready = this.inputBuffer.buffer.get(playerId)?.has(frame); // Check if we already had an input (or prediction) for this frame
 
+    if (frame < this.currentFrame - this.inputIgnoreThreshold) {
+      console.warn(`[RollbackManager] Ignoring very old input for Player ${playerId} at Frame ${frame} (Current: ${this.currentFrame}). Likely from join.`); // DEBUG
+      // Still record the input in case it's needed for future predictions, but don't rollback
+      this.inputBuffer.recordInput(playerId, frame, input);
+      this.inputBuffer.updatePrediction(playerId);
+      return; // Exit early, do not process for rollback
+    }
+    console.log(`[RollbackManager Debug] P${this.myId} received input for P${playerId} frame ${frame}. My currentFrame is ${this.currentFrame}. Frame < Current: ${frame < this.currentFrame}`);
+    // console.log(`[RollbackManager] Received remote input for Player ${playerId} at Frame ${frame}:`, input); // DEBUG
+    let needsRollback = false;
+    if (frame < this.currentFrame) {
+      // Get the input that was used (or predicted) for this frame before recording the new one
+      const previousInputForFrame = this.inputBuffer.getInput(playerId, frame); // Get prediction/actual before update
+      if (!inputsAreEqual(input, previousInputForFrame)) {
+        console.log(`[RollbackManager] Remote input for past frame ${frame} differs from previous input/prediction. Triggering rollback.`); // DEBUG
+        needsRollback = true;
+      } else {
+        console.log(`[RollbackManager] Remote input for past frame ${frame} matches prediction. No rollback needed.`); // DEBUG
+      }
+    } else {
+      // console.log(`[RollbackManager] Remote input for future/current frame ${frame}. No rollback needed yet.`); // DEBUG
+    }
+
+
+    // Record the actual input regardless of rollback decision
     this.inputBuffer.recordInput(playerId, frame, input);
 
-    // Update prediction for this player based on the newly received input
     this.inputBuffer.updatePrediction(playerId);
 
-    // If this input is for a past frame AND it's different from what we had/predicted, we need to rollback
-    // Note: We only need to rollback if the input is *new* or *different* from a prediction used for that frame.
-    // Checking `frame < this.currentFrame` is the basic trigger. A more robust check might compare
-    // the new input against what getInput() would have returned for that frame before the new input arrived.
-    if (frame < this.currentFrame && !hadInputAlready) { // Simple check: rollback if it's for the past and we didn't have it
-      console.log(`[RollbackManager] Remote input for past frame ${frame} (current: ${this.currentFrame}). Triggering rollback.`); // DEBUG
+    // Perform rollback if needed
+    if (needsRollback) {
       this.performRollback(frame);
-    } else if (frame >= this.currentFrame) {
-      // console.log(`[RollbackManager] Remote input for future/current frame ${frame}. No rollback needed.`); // DEBUG
-    } else {
-      // console.log(`[RollbackManager] Remote input for past frame ${frame}, but already had input. No rollback needed.`); // DEBUG
     }
   }
 
@@ -260,11 +308,16 @@ class RollbackManager {
     rollbackState.apply(this.playerMap, this.projectileMap);
     console.log(`[RollbackManager] State for frame ${restoreFrame} applied.`); // DEBUG
 
+    //temp logs
+    console.log(`[RollbackManager] Positions AFTER applying state for frame ${restoreFrame}:`);
+    this.playerMap.forEach((p, id) => {
+      console.log(`  - Player ${id}: (${p.x.toFixed(1)}, ${p.y.toFixed(1)})`);
+    });
+
     // Resimulate all frames from the restored state's frame up to the current frame
     let frame = restoreFrame;
     console.log(`[RollbackManager] Resimulating from frame ${frame} up to (but not including) ${this.currentFrame}`); // DEBUG
     while (frame < this.currentFrame) {
-      // console.log(`[RollbackManager] Resimulating frame ${frame}...`); // DEBUG (Can be very noisy)
       this.simulateFrame(frame); // Use the corrected inputs now available in the buffer
       frame++;
     }
@@ -275,21 +328,36 @@ class RollbackManager {
   }
 
   simulateFrame(frame) {
+
+    const isResimulating = this.isRollingBack; // Check if we are currently in a rollback resimulation phase
+
+    if (isResimulating) {
+      console.log(`--- Resimulating Frame ${frame} ---`);
+    }
+
     // Apply inputs for all players for this frame
     this.playerMap.forEach((player, playerId) => {
       const input = this.inputBuffer.getInput(playerId, frame); // This will now use the corrected remote input if available
 
+      if (isResimulating) {
+        console.log(`  [Resim Frame ${frame}] Input for ${playerId}:`, JSON.stringify(input));
+      }
+
       // Convert input format to match your keys format
       const keysFormat = {
-        w: { pressed: input.w },
-        a: { pressed: input.a },
-        s: { pressed: input.s },
-        d: { pressed: input.d }
-      };
+        w: { pressed: input?.w || false }, // Use input value or default to false if input is null/undefined
+        a: { pressed: input?.a || false },
+        s: { pressed: input?.s || false },
+        d: { pressed: input?.d || false }
+    };
 
       // Use your existing handleMovement function
       // Ensure handleMovement is deterministic!
       handleMovement(player, keysFormat);
+
+      if (isResimulating) {
+        console.log(`  [Resim Frame ${frame}] Pos AFTER move for ${playerId}: (${player.x.toFixed(1)}, ${player.y.toFixed(1)})`);
+      }
     });
 
     // Update projectiles - this must also be deterministic
@@ -299,24 +367,26 @@ class RollbackManager {
 
     // Handle collisions - must be deterministic
     this.handleCollisions();
+
+    if (isResimulating) {
+      console.log(`--- Finished Resimulating Frame ${frame} ---`);
+    }
   }
 
   handleCollisions() {
-    // Check for collisions between projectiles and players
-    // Important: The order of checks might matter for determinism if multiple collisions can happen simultaneously.
-    // Iterating over maps can have inconsistent order if not careful. Convert to arrays and sort if needed.
-    const projectileIds = Array.from(this.projectileMap.keys()); // Consider sorting these IDs if order matters
-    const playerIds = Array.from(this.playerMap.keys());       // Consider sorting these IDs if order matters
+
+    const projectileIds = Array.from(this.projectileMap.keys());
+    const playerIds = Array.from(this.playerMap.keys());
 
     projectileIds.forEach(projId => {
       const projectile = this.projectileMap.get(projId);
       if (!projectile) return; // Projectile might have been deleted in a previous collision check this frame
 
-      const projectileOwner = projId.split('-')[0]; // Assuming format 'playerId-timestamp'
+      const projectileOwner = projId.split('-')[0];
 
       playerIds.forEach(playerId => {
         const player = this.playerMap.get(playerId);
-        if (!player) return; // Should not happen if playerIds is derived from the current map
+        if (!player) return;
 
         // Skip collisions with the projectile owner
         if (playerId === projectileOwner) return;
@@ -332,25 +402,25 @@ class RollbackManager {
           // Handle collision (damage player, remove projectile)
           // Ensure these operations are deterministic
           player.radius = Math.max(10, player.radius - 5); // Deterministic math
+          if (player.radius <= 10) { 
+            player.color = "purple"; // Change color if radius is too small
+          }
           this.projectileMap.delete(projId); // Deterministic removal
-          // Important: Since we deleted the projectile, we should skip further checks for it in the outer loop.
-          // The `if (!projectile) return;` at the start of the outer loop handles this for subsequent player checks,
-          // but breaking/continuing the inner loop might be needed depending on exact logic.
-          // For simplicity, the current structure might double-check players against an already-deleted projectile,
-          // but the `this.projectileMap.get(projId)` check prevents errors.
+          return; // Exit inner loop to avoid double processing
         }
       });
+      //   if (!this.projectileMap.has(projId)) {
+      //     // If we didn't return/break from inner loop, we might need this
+      //     // continue; // Go to the next projectileId
+      //  }
     });
   }
 
   // --- Manual Testing Methods ---
 
   manualSaveState() {
-    const frameToSave = this.currentFrame; // Save the *next* frame state usually
+    const frameToSave = this.currentFrame; // Save the next frame state
     console.log(`[RollbackManager] MANUAL SAVE requested for frame ${frameToSave}`);
-    // Ensure simulation runs for the current frame first if needed, then save.
-    // Or adjust logic to save the state *before* simulating currentFrame.
-    // Let's assume we save the state *before* simulating the frame it represents.
     const state = GameState.captureState(frameToSave, this.playerMap, this.projectileMap);
     this.frameStates.push(state);
     console.log(`[RollbackManager] MANUAL SAVE completed for frame ${frameToSave}. Total states: ${this.frameStates.length}`);
